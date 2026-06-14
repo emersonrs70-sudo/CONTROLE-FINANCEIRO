@@ -1,6 +1,6 @@
 // CONFIGURAÇÃO DO CLIENTE SUPABASE (Conexão Segura e Direta)
-const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co"; // SUBSTITUA PELO SEU URL REAL
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs"; // SUBSTITUA PELA SUA ANON KEY REAL
+const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co"; // <-- COLOQUE SEU URL REAL AQUI
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs"; // <-- COLOQUE SUA ANON KEY REAL AQUI
 
 let supabase;
 try {
@@ -27,7 +27,7 @@ let chart1, chart2, chart3;
 
 const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-// FUNÇÃO SINK ASSÍNCRONA COM O SUPABASE
+// FUNÇÃO SINK ASSÍNCRONA COM O SUPABASE (Corrigida e Blindada contra datas nulas)
 async function carregarDadosSupabase() {
     if (!supabase) return;
     try {
@@ -39,7 +39,6 @@ async function carregarDadosSupabase() {
         if (errDesp) throw errDesp;
         if (errProj) throw errProj;
 
-        // Mapeia os dados tratando qualquer inconsistência de data ou valores vazios
         receitas = (resReceitas || []).map(r => {
             const dataValida = r.data_criacao || new Date().toISOString();
             return {
@@ -93,9 +92,13 @@ function movimientoPertenceAoPeriodo(item, mesAlvo, anoAlvo) {
         return anoAlvo === dataItem.getFullYear() && mesAlvo === dataItem.getMonth();
     }
     if (item.tipo === 'fixo') {
-        if (item.validadeAte) {
-            const [anoLimite, mesLimite] = item.validadeAte.split('-').map(Number);
-            if (anoAlvo > anoLimite || (anoAlvo === anoLimite && mesAlvo > (mesLimite - 1))) return false;
+        if (item.validadeAte && typeof item.validadeAte === 'string') {
+            const partes = item.validadeAte.split('-');
+            if(partes.length >= 2) {
+                const anoLimite = Number(partes[0]);
+                const mesLimite = Number(partes[1]);
+                if (anoAlvo > anoLimite || (anoAlvo === anoLimite && mesAlvo > (mesLimite - 1))) return false;
+            }
         }
         return true;
     }
@@ -396,7 +399,7 @@ function renderizarHistoricoGeral() {
 
     let unificado = [
         ...despesas.map(d => ({...d, fluxo: 'despesa'})),
-        ...receitas.map(r => ({...r, fluxo: 'receita', categoria: 'Renda'}))
+        ...receitas.map(r => ({...r, fluxo: 'receita', category: 'Renda'}))
     ].sort((a,b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
 
     let filtrado = unificado.filter(item => {
@@ -410,7 +413,7 @@ function renderizarHistoricoGeral() {
             <td class="py-2">${item.fluxo === 'despesa' ? '🔻 Despesa' : '🔺 Receita'}</td>
             <td>${formatarDataBR(item.dataCriacao)}</td>
             <td class="font-medium">${item.nome}</td>
-            <td class="text-slate-400">${item.categoria} (${item.tipo})</td>
+            <td class="text-slate-400">${item.categoria || 'Sem Categoria'} (${item.tipo})</td>
             <td class="text-right font-bold ${item.fluxo === 'despesa' ? 'text-red-500' : 'text-emerald-500'}">
                 ${item.fluxo === 'despesa' ? '-' : '+'} R$ ${item.valor.toFixed(2)}
             </td>
@@ -457,8 +460,7 @@ window.carregarItemParaEdicao = function(id, fluxo) {
     document.getElementById('lancamento-nome').value = item.nome;
     document.getElementById('lancamento-valor').value = item.valor;
     
-    // Tratamento seguro para carregar a data no seletor HTML
-    if(item.dataCriacao) {
+    if(item.dataCriacao && typeof item.dataCriacao === 'string') {
         document.getElementById('lancamento-data').value = item.dataCriacao.split('T')[0];
     }
     
@@ -537,7 +539,6 @@ function configurarAbasFormulario() {
     };
 }
 
-// SUBMISSÃO ASSÍNCRONA DIRETA PARA O BANCO DE DADOS
 document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
     e.preventDefault();
     if(!supabase) return alert("Banco de dados indisponível.");
@@ -546,7 +547,6 @@ document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
     const nome = document.getElementById('lancamento-nome').value;
     const valor = parseFloat(document.getElementById('lancamento-valor').value);
     
-    // Tratamento estrito de fuso horário local ao converter para ISO String
     const inputDataVal = document.getElementById('lancamento-data').value;
     let dataTransacao = new Date();
     if(inputDataVal) {
@@ -627,7 +627,7 @@ function renderizarProjetos(rendaMensal) {
         let saldoDisponivelProporcional = calcularSaldoRealHojeEstatico();
         let pctProgresso = totalMetasCusto > 0 ? Math.min(100, Math.max(0, (saldoDisponivelProporcional / totalMetasCusto) * 100)) : 0;
 
-        const dataExibicao = p.dataAlvo.split('T')[0].split('-').reverse().join('/');
+        const dataExibicao = p.dataAlvo ? p.dataAlvo.split('T')[0].split('-').reverse().join('/') : '';
 
         tBodyP.innerHTML += `
             <tr class="border-b text-xs dark:border-slate-800">
@@ -908,6 +908,5 @@ window.onload = () => {
     configurarSeletoresExtrato();
     gerenciarIconeTema();
     
-    // Inicia a comunicação direta com as tabelas na nuvem
     carregarDadosSupabase();
 };
