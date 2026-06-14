@@ -1,6 +1,6 @@
 // CONFIGURAÇÃO DO CLIENTE SUPABASE
-const SUPABASE_URL = "SEU_SUPABASE_URL_AQUI";
-const SUPABASE_KEY = "SUA_SUPABASE_ANON_KEY_AQUI";
+const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // CORE ENGINE V4.1.0 (Migrado para Supabase - Mantendo 100% da identidade visual)
