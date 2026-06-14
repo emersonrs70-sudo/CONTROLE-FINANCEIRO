@@ -1,6 +1,6 @@
 // CONFIGURAÇÃO DO CLIENTE SUPABASE (Conexão Segura e Direta)
-const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co"; 
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs"; 
+const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co"; // SUBSTITUA PELO SEU URL REAL
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs"; // SUBSTITUA PELA SUA ANON KEY REAL
 
 let supabase;
 try {
@@ -13,7 +13,7 @@ try {
     console.error("Erro ao inicializar cliente Supabase:", e.message);
 }
 
-// CORE ENGINE V4.0.0 - INTEGRADO AO SUPABASE
+// CORE ENGINE V4.0.0 - INTEGRADO AO SUPABASE (ESTÁVEL)
 let dataAncorada = new Date();
 let despesas = [];
 let receitas = [];
@@ -39,20 +39,29 @@ async function carregarDadosSupabase() {
         if (errDesp) throw errDesp;
         if (errProj) throw errProj;
 
-        // Mapeia os dados do banco garantindo compatibilidade com camelCase do seu app.js
-        receitas = (resReceitas || []).map(r => ({
-            id: r.id, nome: r.nome, valor: parseFloat(r.valor), categoria: 'Renda',
-            tipo: r.tipo || 'variavel', validadeAte: r.validadeate, dataCriacao: r.data_criacao
-        }));
+        // Mapeia os dados tratando qualquer inconsistência de data ou valores vazios
+        receitas = (resReceitas || []).map(r => {
+            const dataValida = r.data_criacao || new Date().toISOString();
+            return {
+                id: r.id, nome: r.nome || 'Sem Nome', valor: parseFloat(r.valor) || 0, categoria: 'Renda',
+                tipo: r.tipo || 'variavel', validadeAte: r.validadeate || null, dataCriacao: dataValida
+            };
+        });
 
-        despesas = (resDespesas || []).map(d => ({
-            id: d.id, nome: d.nome, valor: parseFloat(d.valor), categoria: d.categoria,
-            tipo: d.tipo || 'variavel', validadeAte: d.validadeate, dataCriacao: d.data_criacao
-        }));
+        despesas = (resDespesas || []).map(d => {
+            const dataValida = d.data_criacao || new Date().toISOString();
+            return {
+                id: d.id, nome: d.nome || 'Sem Nome', valor: parseFloat(d.valor) || 0, categoria: d.categoria || 'Outros',
+                tipo: d.tipo || 'variavel', validadeAte: d.validadeate || null, dataCriacao: dataValida
+            };
+        });
 
-        projetosProjetados = (resProjetos || []).map(p => ({
-            id: p.id, nome: p.nome, valor: parseFloat(p.valor), dataAlvo: p.data_alvo
-        }));
+        projetosProjetados = (resProjetos || []).map(p => {
+            const dataAlvoValida = p.data_alvo || new Date().toISOString();
+            return {
+                id: p.id, nome: p.nome || 'Sem Nome', valor: parseFloat(p.valor) || 0, dataAlvo: dataAlvoValida
+            };
+        });
 
         atualizarInterfacePeriodo();
     } catch (error) {
@@ -63,6 +72,7 @@ async function carregarDadosSupabase() {
 function formatarDataBR(isoString) {
     if(!isoString) return '';
     const d = new Date(isoString);
+    if(isNaN(d.getTime())) return '';
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
@@ -73,7 +83,10 @@ function atualizarInterfacePeriodo() {
 }
 
 function movimientoPertenceAoPeriodo(item, mesAlvo, anoAlvo) {
+    if (!item || !item.dataCriacao) return false;
     const dataItem = new Date(item.dataCriacao);
+    if (isNaN(dataItem.getTime())) return false;
+
     if (anoAlvo < dataItem.getFullYear() || (anoAlvo === dataItem.getFullYear() && mesAlvo < dataItem.getMonth())) return false;
     
     if (item.tipo === 'variavel') {
@@ -94,7 +107,7 @@ function calcularSaldoRealHojeEstatico() {
     const mesHoje = hoje.getMonth();
     const anoHoje = hoje.getFullYear();
 
-    let todasDatas = [...despesas, ...receitas].map(x => new Date(x.dataCriacao));
+    let todasDatas = [...despesas, ...receitas].map(x => new Date(x.dataCriacao)).filter(d => !isNaN(d.getTime()));
     if (todasDatas.length === 0) return 0;
 
     let menorData = new Date(Math.min(...todasDatas));
@@ -123,7 +136,7 @@ function calcularProjecaoCascataAtePeriodo(mesAlvo, anoAlvo) {
 
     let ponteiroSaldoAcumulado = calcularSaldoRealHojeEstatico();
 
-    let todasDatas = [...despesas, ...receitas].map(x => new Date(x.dataCriacao));
+    let todasDatas = [...despesas, ...receitas].map(x => new Date(x.dataCriacao)).filter(d => !isNaN(d.getTime()));
     if (todasDatas.length === 0) return 0;
 
     let menorData = new Date(Math.min(...todasDatas));
@@ -443,7 +456,12 @@ window.carregarItemParaEdicao = function(id, fluxo) {
     document.getElementById('lancamento-id-edicao').value = item.id;
     document.getElementById('lancamento-nome').value = item.nome;
     document.getElementById('lancamento-valor').value = item.valor;
-    document.getElementById('lancamento-data').value = item.dataCriacao.split('T')[0];
+    
+    // Tratamento seguro para carregar a data no seletor HTML
+    if(item.dataCriacao) {
+        document.getElementById('lancamento-data').value = item.dataCriacao.split('T')[0];
+    }
+    
     document.getElementById('despesa-tipo').value = item.tipo || 'variavel';
     document.getElementById('despesa-validade').value = item.validadeAte || '';
 
@@ -527,7 +545,15 @@ document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
     const idEdicao = document.getElementById('lancamento-id-edicao').value;
     const nome = document.getElementById('lancamento-nome').value;
     const valor = parseFloat(document.getElementById('lancamento-valor').value);
-    const dataTransacao = new Date(document.getElementById('lancamento-data').value + "T12:00:00");
+    
+    // Tratamento estrito de fuso horário local ao converter para ISO String
+    const inputDataVal = document.getElementById('lancamento-data').value;
+    let dataTransacao = new Date();
+    if(inputDataVal) {
+        const parts = inputDataVal.split('-');
+        dataTransacao = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+    }
+    
     const tipo = document.getElementById('despesa-tipo').value;
     const validade = document.getElementById('despesa-validade').value || null;
 
@@ -558,7 +584,6 @@ document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
 
     try {
         if(idEdicao) {
-            // Se possuir ID numérico (visto do Supabase), atualiza. Caso contrário, faz fallback deletando o antigo local
             const { error } = await supabase.from(tabela).update(payload).eq('id', idEdicao);
             if(error) throw error;
         } else {
@@ -589,6 +614,8 @@ function renderizarProjetos(rendaMensal) {
     projetosProjetados.forEach(p => {
         const hoje = new Date();
         const dataAlvo = new Date(p.dataAlvo);
+        if(isNaN(dataAlvo.getTime())) return;
+
         let mesesRestantes = (dataAlvo.getFullYear() - hoje.getFullYear()) * 12 + (dataAlvo.getMonth() - hoje.getMonth());
         if (mesesRestantes <= 0) mesesRestantes = 1;
 
@@ -600,6 +627,8 @@ function renderizarProjetos(rendaMensal) {
         let saldoDisponivelProporcional = calcularSaldoRealHojeEstatico();
         let pctProgresso = totalMetasCusto > 0 ? Math.min(100, Math.max(0, (saldoDisponivelProporcional / totalMetasCusto) * 100)) : 0;
 
+        const dataExibicao = p.dataAlvo.split('T')[0].split('-').reverse().join('/');
+
         tBodyP.innerHTML += `
             <tr class="border-b text-xs dark:border-slate-800">
                 <td class="py-3 font-bold">${p.nome}</td>
@@ -610,7 +639,7 @@ function renderizarProjetos(rendaMensal) {
                     </div>
                     <span class="text-[9px] text-slate-400">${pctProgresso.toFixed(0)}% poupado</span>
                 </td>
-                <td>${p.dataAlvo.split('T')[0].split('-').reverse().join('/')}</td>
+                <td>${dataExibicao}</td>
                 <td class="text-purple-600 font-bold">R$ ${demandaMensal.toFixed(2)}/mês</td>
                 <td><span class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-950 rounded text-purple-700">${porcentagemRenda.toFixed(1)}%</span></td>
                 <td class="text-center"><button onclick="excluirProjeto('${p.id}')" class="text-red-400 hover:text-red-600">Remover</button></td>
