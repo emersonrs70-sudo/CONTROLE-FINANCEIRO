@@ -3,12 +3,12 @@ const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// CORE ENGINE V4.1.0 (Migrado para Supabase - Mantendo 100% da identidade visual)
+// CORE ENGINE V4.1.0 (Integrado com Supabase - Mantendo 100% da identidade visual)
 let dataAncorada = new Date();
 let despesas = [];
 let receitas = [];
+let projetosProjetados = [];
 let categoriasDisponiveis = JSON.parse(localStorage.getItem('fin_categorias')) || ["Moradia", "Alimentação", "Transporte", "Lazer"];
-let projetosProjetados = JSON.parse(localStorage.getItem('fin_projetos')) || [];
 
 let modoFormulario = "despesa"; 
 let filtroExtratoAtual = "todos"; // todos | despesas | receitas
@@ -17,17 +17,20 @@ let chart1, chart2, chart3;
 
 const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-// CARREGAR DADOS INICIAIS DO SUPABASE
+// CARREGAR DADOS EM TEMPO REAL DO SUPABASE
 async function carregarDadosSupabase() {
     try {
         const { data: resReceitas, error: errRec } = await supabase.from('receitas').select('*');
         const { data: resDespesas, error: errDesp } = await supabase.from('despesas').select('*');
+        const { data: resProjetos, error: errProj } = await supabase.from('projetos').select('*');
 
         if (errRec) throw errRec;
         if (errDesp) throw errDesp;
+        if (errProj) throw errProj;
 
         receitas = resReceitas || [];
         despesas = resDespesas || [];
+        projetosProjetados = resProjetos || [];
 
         atualizarInterfacePeriodo();
     } catch (error) {
@@ -50,11 +53,11 @@ function atualizarInterfacePeriodo() {
 function movimientoPertenceAoPeriodo(item, mesAlvo, anoAlvo) {
     const dataItem = new Date(item.data_criacao || item.dataCriacao);
     if (anoAlvo < dataItem.getFullYear() || (anoAlvo === dataItem.getFullYear() && mesAlvo < dataItem.getMonth())) return false;
-    if (item.tipo === 'variavel') {
+    if (item.tipo === 'variavel' || !item.tipo) {
         return anoAlvo === dataItem.getFullYear() && mesAlvo === dataItem.getMonth();
     }
     if (item.tipo === 'fixo') {
-        const validade = item.validadeAte || item.validadeate;
+        const validade = item.validadeate || item.validadeAte;
         if (validade) {
             const [anoLimite, mesLimite] = validade.split('-').map(Number);
             if (anoAlvo > anoLimite || (anoAlvo === anoLimite && mesAlvo > (mesLimite - 1))) return false;
@@ -329,8 +332,8 @@ function renderizarLançamentos() {
     document.getElementById('txt-maiores-gargalos').innerText = topCats.length ? `Seus maiores gastos se concentram em: ${topCats.join(' e ')}.` : 'Nenhum gasto registrado.';
 
     lucide.createIcons();
-    if (typeof renderizarProjetos === 'function') renderizarProjetos(totalReceitas);
-    if (typeof atualizarFiltrosEGráficos === 'function') atualizarFiltrosEGráficos(despesasDoMes, totalReceitas, totalDespesas);
+    renderizarProjetos(totalReceitas);
+    atualizarFiltrosEGráficos(despesasDoMes, totalReceitas, totalDespesas);
 }
 
 function renderizarHistoricoGeral() {
@@ -363,7 +366,7 @@ function renderizarHistoricoGeral() {
     `).join('');
 }
 
-// CAPTURA DO FORMULÁRIO (SALVAR / ENVIAR PARA O SUPABASE)
+// SALVAR LANÇAMENTOS NO SUPABASE
 document.getElementById('form-movimentacao').onsubmit = async (e) => {
     e.preventDefault();
     
@@ -373,24 +376,21 @@ document.getElementById('form-movimentacao').onsubmit = async (e) => {
     const dataCriacao = document.getElementById('mov-data').value ? new Date(document.getElementById('mov-data').value).toISOString() : new Date().toISOString();
     
     let tabela = modoFormulario === 'despesa' ? 'despesas' : 'receitas';
-    
     let payload = { nome, valor, data_criacao: dataCriacao };
     
     if (modoFormulario === 'despesa') {
         payload.categoria = document.getElementById('mov-categoria').value;
         payload.tipo = document.getElementById('mov-tipo').value;
         if (payload.tipo === 'fixo') {
-            payload.validadeAte = document.getElementById('mov-validade') ? document.getElementById('mov-validade').value : null;
+            payload.validadeate = document.getElementById('mov-validade') ? document.getElementById('mov-validade').value : null;
         }
     }
 
     try {
         if (idEdicao) {
-            // Modo Edição
             const { error } = await supabase.from(tabela).update(payload).eq('id', idEdicao);
             if (error) throw error;
         } else {
-            // Modo Criação
             const { error } = await supabase.from(tabela).insert([payload]);
             if (error) throw error;
         }
@@ -447,7 +447,104 @@ window.carregarItemParaEdicao = function(id, fluxo) {
     document.getElementById('form-movimentacao').scrollIntoView({ behavior: 'smooth' });
 };
 
-// MAPEAMENTO DE EVENTOS DOS BOTÕES DE NAVEGAÇÃO
+// --- GESTÃO DE PROJETOS DE VIDA VIA SUPABASE ---
+function renderizarProjetos(totalReceitasPeriodo) {
+    const listaProjetosContainer = document.getElementById('lista-projetos-vida');
+    if (!listaProjetosContainer) return;
+
+    if (projetosProjetados.length === 0) {
+        listaProjetosContainer.innerHTML = `<div class="text-center py-4 text-slate-400 text-xs">Nenhum projeto de vida planejado.</div>`;
+        return;
+    }
+
+    listaProjetosContainer.innerHTML = projetosProjetados.map(proj => {
+        const dataAlvoFormatada = proj.data_alvo || proj.dataAlvo;
+        const totalAcumuladoPoupado = calcularSaldoRealHojeEstatico();
+        const porcentagemProgresso = totalAcumuladoPoupado > 0 ? Math.min(100, (totalAcumuladoPoupado / proj.valor) * 100) : 0;
+
+        return `
+            <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col gap-2 relative group">
+                <button onclick="excluirProjeto('${proj.id}')" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+                <div class="flex justify-between items-start pr-5">
+                    <div>
+                        <h4 class="font-bold text-xs text-slate-700 dark:text-slate-300">${proj.nome}</h4>
+                        <span class="text-[10px] text-slate-400 flex items-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5"></i> Alvo: ${formatarDataBR(dataAlvoFormatada)}</span>
+                    </div>
+                    <span class="text-xs font-black text-purple-600 dark:text-purple-400">R$ ${proj.valor.toFixed(2)}</span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-purple-600 h-full rounded-full transition-all duration-500" style="width: ${porcentagemProgresso}%"></div>
+                </div>
+                <div class="flex justify-between items-center text-[10px] text-slate-400">
+                    <span>Progresso Real</span>
+                    <span class="font-bold text-slate-600 dark:text-slate-300">${porcentagemProgresso.toFixed(0)}%</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+    lucide.createIcons();
+}
+
+document.getElementById('form-projeto').onsubmit = async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('proj-nome').value;
+    const valor = parseFloat(document.getElementById('proj-valor').value);
+    const dataAlvo = document.getElementById('proj-data').value ? new Date(document.getElementById('proj-data').value).toISOString() : new Date().toISOString();
+
+    try {
+        const { error } = await supabase.from('projetos').insert([{ nome, valor, data_alvo: dataAlvo }]);
+        if (error) throw error;
+        e.target.reset();
+        await carregarDadosSupabase();
+    } catch (error) {
+        alert("Erro ao salvar projeto: " + error.message);
+    }
+};
+
+window.excluirProjeto = async function(id) {
+    if(!confirm("Deseja deletar este projeto de vida?")) return;
+    try {
+        const { error } = await supabase.from('projetos').delete().eq('id', id);
+        if (error) throw error;
+        await carregarDadosSupabase();
+    } catch (error) {
+        alert("Erro ao excluir projeto: " + error.message);
+    }
+};
+
+// --- CONSULTOR DE CHAT AUTOMÁTICO ---
+if(document.getElementById('btn-enviar-chat')) {
+    document.getElementById('btn-enviar-chat').onclick = processarChatInput;
+}
+if(document.getElementById('chat-input')) {
+    document.getElementById('chat-input').onkeydown = (e) => { if(e.key === 'Enter') processarChatInput(); };
+}
+
+function processarChatInput() {
+    const input = document.getElementById('chat-input');
+    const area = document.getElementById('chat-area');
+    if(!input || !input.value.trim()) return;
+
+    const texto = input.value.toLowerCase();
+    area.innerHTML = `<span class="text-purple-500 font-bold">Você:</span> ${input.value}<br>`;
+    
+    if(texto.includes('dica') || texto.includes('ajuda') || texto.includes('saldo')) {
+        const saldoFinal = calcularProjecaoCascataAtePeriodo(dataAncorada.getMonth(), dataAncorada.getFullYear());
+        if(saldoFinal < 0) {
+            area.innerHTML += `<span class="text-emerald-500 font-bold">Consultor:</span> Atenção! Sua projeção em cascata para este mês indica déficit. Sugiro rever a aba de simulação de cortes rápidos abaixo do extrato.`;
+        } else {
+            area.innerHTML += `<span class="text-emerald-500 font-bold">Consultor:</span> Seu fluxo atual está saudável! Continue respeitando a divisão automática das metas de 50/30/20 exibidas no painel de alocações sugeridas.`;
+        }
+    } else {
+        area.innerHTML += `<span class="text-emerald-500 font-bold">Consultor:</span> Entendido! Lembre-se que seu saldo acumulado atual reflete todas as despesas passadas e fixas ativas no banco de dados.`;
+    }
+    input.value = '';
+    area.scrollTop = area.scrollHeight;
+}
+
+// NAVEGAÇÃO DE PERÍODOS E TEMA
 document.getElementById('btn-mes-anterior').onclick = () => { dataAncorada.setMonth(dataAncorada.getMonth()-1); atualizarInterfacePeriodo(); };
 document.getElementById('btn-mes-seguinte').onclick = () => { dataAncorada.setMonth(dataAncorada.getMonth()+1); atualizarInterfacePeriodo(); };
 document.getElementById('btn-mes-atual').onclick = () => { dataAncorada = new Date(); atualizarInterfacePeriodo(); };
@@ -458,13 +555,19 @@ document.getElementById('btn-tema').onclick = () => {
     atualizarInterfacePeriodo();
 };
 
-// INICIALIZAÇÃO AUTOMÁTICA AO CARREGAR A PÁGINA
+if(document.getElementById('btn-chat-trigger')) {
+    document.getElementById('btn-chat-trigger').onclick = () => document.getElementById('caixa-chat').classList.toggle('hidden');
+}
+if(document.getElementById('btn-minimizar-chat')) {
+    document.getElementById('btn-minimizar-chat').onclick = () => document.getElementById('caixa-chat').classList.add('hidden');
+}
+
+// INICIALIZAÇÃO DA PÁGINA
 window.onload = () => {
     if (typeof configurarAbasFormulario === 'function') configurarAbasFormulario();
     if (typeof inicializarPainelGraficosCollapse === 'function') inicializarPainelGraficosCollapse();
     if (typeof configurarEfeitoLupaGraficos === 'function') configurarEfeitoLupaGraficos();
     if (typeof configurarSeletoresExtrato === 'function') configurarSeletoresExtrato();
     
-    // Inicia a carga de dados direto do Banco de Dados Supabase
     carregarDadosSupabase();
 };
