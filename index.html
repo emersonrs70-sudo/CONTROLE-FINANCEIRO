@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador Financeiro Premium v4.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        window.SUPABASE_URL = "https://seu-projeto.supabase.co"; // Substitua pela sua URL
+        window.SUPABASE_ANON_KEY = "sua-chave-anon-publica";     // Substitua pela sua Anon Key
+        
+        // Inicialização global do cliente Supabase
+        window.supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    </script>
+
+    <style>
+        .grid-animado {\n            transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1);\n        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen font-sans antialiased transition-colors duration-300">
+
+    <header class="w-full bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-4 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white font-black text-sm shadow-md shadow-emerald-500/20">S</div>
+                <div>
+                    <h1 class="text-sm font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Finanças Premium</h1>
+                    <p class="text-[10px] text-slate-400 font-medium">Controle Absoluto & Insights</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
+                <button id="btn-mes-anterior" class="p-1.5 hover:bg-white dark:hover:bg-slate-900 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                <button id="btn-mes-atual" class="px-3 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 rounded-lg transition-all" id="txt-periodo-atual">Janeiro 2026</button>
+                <div id="txt-periodo-atual" class="hidden"></div>
+                <button id="btn-mes-seguinte" class="p-1.5 hover:bg-white dark:hover:bg-slate-900 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="btn-toggle-painel" class="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-500"></i> Gráficos
+                </button>
+                <button id="btn-tema" class="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all">
+                    <i data-lucide="sun" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6 grid-animado" id="main-layout">
+        
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            
+            <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-2xl relative overflow-hidden group shadow-sm">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-all"></div>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Receitas</span>
+                        <div class="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-500"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i></div>
+                    </div>
+                    <h3 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white" id="card-receitas">R$ 0,00</h3>
+                    <p class="text-[10px] text-slate-400 mt-1 flex items-center gap-0.5"><span class="text-emerald-500 font-bold" id="perc-receitas">0%</span> do teto mensal</p>
+                </div>
+
+                <div class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-2xl relative overflow-hidden group shadow-sm">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-xl group-hover:bg-rose-500/10 transition-all"></div>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Despesas</span>
+                        <div class="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-500"><i data-lucide="trending-down" class="w-3.5 h-3.5"></i></div>
+                    </div>
+                    <h3 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white" id="card-despesas">R$ 0,00</h3>
+                    <p class="text-[10px] text-slate-400 mt-1 flex items-center gap-0.5"><span class="text-rose-500 font-bold" id="perc-despesas">0%</span> comprometido</p>
+                </div>
+
+                <div class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-2xl relative overflow-hidden group shadow-sm border-l-2 border-l-purple-500">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl group-hover:bg-purple-500/10 transition-all"></div>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Saldo Líquido</span>
+                        <div class="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-500"><i data-lucide="wallet" class="w-3.5 h-3.5"></i></div>
+                    </div>
+                    <h3 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white" id="card-saldo">R$ 0,00</h3>
+                    <p class="text-[10px] text-slate-400 mt-1" id="txt-status-saldo">Cálculo em tempo real</p>
+                </div>
+            </section>
+
+            <section class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                    <div>
+                        <h2 class="text-xs font-bold text-slate-900 dark:text-white">Extrato de Lançamentos</h2>
+                        <p class="text-[10px] text-slate-400">Movimentações deste período ancorado</p>
+                    </div>
+                    <div class="flex bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-0.5" id="filtro-extrato">
+                        <button data-filtro="todos" class="px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all bg-white text-slate-800 dark:bg-slate-900 dark:text-white shadow-xs">Todos</button>
+                        <button data-filtro="receitas" class="px-2.5 py-1 text-[10px] font-semibold rounded-md text-slate-400 transition-all hover:text-slate-600 dark:hover:text-slate-200">Receitas</button>
+                        <button data-filtro="despesas" class="px-2.5 py-1 text-[10px] font-semibold rounded-md text-slate-400 transition-all hover:text-slate-600 dark:hover:text-slate-200">Despesas</button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                <th class="pb-2">Descrição</th>
+                                <th class="pb-2">Categoria/Tipo</th>
+                                <th class="pb-2">Data</th>
+                                <th class="pb-2 text-right">Valor</th>
+                                <th class="pb-2 text-center w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-lancamentos" class="text-xs divide-y divide-slate-50 dark:divide-slate-800/40">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+                <div>
+                    <h2 class="text-xs font-bold text-slate-900 dark:text-white mb-1">Metas & Projetos Projetados</h2>
+                    <p class="text-[10px] text-slate-400 mb-4">Acompanhamento de alvos de poupança de médio/longo prazo</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="container-projetos">
+                    </div>
+                <form id="form-projeto" class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" id="proj-nome" placeholder="Nome da Meta" required class="bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                    <input type="number" id="proj-valor" step="0.01" placeholder="Valor Alvo (R$)" required class="bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                    <div class="flex gap-2">
+                        <input type="date" id="proj-data" required class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 rounded-xl px-3 flex items-center justify-center transition-all shadow-xs"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
+        <div class="flex flex-col gap-6" id="painel-lateral">
+            <section class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+                <div class="flex border-b border-slate-100 dark:border-slate-800 pb-2 mb-4 gap-4" id="abas-formulario">
+                    <button data-aba="despesa" class="text-xs font-bold pb-2 border-b-2 border-slate-900 dark:border-white text-slate-900 dark:text-white transition-all">Nova Despesa</button>
+                    <button data-aba="receita" class="text-xs font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all">Nova Receita</button>
+                </div>
+
+                <form id="form-movimentacao" class="flex flex-col gap-3.5">
+                    <div>
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Descrição</label>
+                        <input type="text" id="mov-nome" placeholder="Ex: Mercado Central" required class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2 text-xs focus:outline-none transition-all">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Valor (R$)</label>
+                            <input type="number" id="mov-valor" step="0.01" placeholder="0,00" required class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2 text-xs focus:outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Data Competência</label>
+                            <input type="date" id="mov-data" required class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2 text-xs focus:outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <div id="container-campo-dinamico" class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Categoria</label>
+                            <select id="mov-categoria" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-2 py-2 text-xs focus:outline-none transition-all">
+                                <option value="Moradia">Moradia</option>
+                                <option value="Alimentação">Alimentação</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Lazer">Lazer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Classificação</label>
+                            <select id="mov-tipo-despesa" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-2 py-2 text-xs focus:outline-none transition-all">
+                                <option value="variavel">Variável</option>
+                                <option value="fixo">Fixo Mensal</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 mt-1">
+                        <input type="checkbox" id="mov-recorrente" class="rounded border-slate-300 dark:border-slate-700 text-emerald-500 focus:ring-0">
+                        <label for="mov-recorrente" class="text-[10px] font-semibold text-slate-400 cursor-pointer">Lançamento recorrente por período estendido</label>
+                    </div>
+
+                    <div id="container-validade" class="hidden">
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Válido até o fim de:</label>
+                        <input type="month" id="mov-validade" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2 text-xs focus:outline-none transition-all">
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-md shadow-emerald-500/10 transition-all mt-2">Confirmar Lançamento</button>
+                </form>
+            </section>
+
+            <section id="painel-graficos-central" class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-6">
+                <div>
+                    <h2 class="text-xs font-bold text-slate-900 dark:text-white mb-1">Análise Avançada de Alocação</h2>
+                    <p class="text-[10px] text-slate-400">Distribuição estática e proporcional por classe</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-1.5 border-b border-slate-50 dark:border-slate-800/50 pb-3" id="filtros-categorias-grafico">
+                    </div>
+
+                <div class="flex flex-col gap-6">
+                    <div class="relative flex flex-col items-center border border-slate-50 dark:border-slate-800/40 p-3 rounded-xl hover:scale-[1.01] transition-transform duration-300">
+                        <span class="text-[9px] font-bold uppercase text-slate-400 mb-2 self-start">Despesas por Categoria</span>
+                        <div class="w-full max-w-[150px]"><canvas id="chart-categoria"></canvas></div>
+                    </div>
+                    <div class="relative flex flex-col items-center border border-slate-50 dark:border-slate-800/40 p-3 rounded-xl hover:scale-[1.01] transition-transform duration-300">
+                        <span class="text-[9px] font-bold uppercase text-slate-400 mb-2 self-start">Proporção Fixo vs Variável</span>
+                        <div class="w-full max-w-[150px]"><canvas id="chart-tipo"></canvas></div>
+                    </div>
+                    <div class="relative flex flex-col items-center border border-slate-50 dark:border-slate-800/40 p-3 rounded-xl hover:scale-[1.01] transition-transform duration-300">
+                        <span class="text-[9px] font-bold uppercase text-slate-400 mb-2 self-start">Balanço de Fluxo</span>
+                        <div class="w-full max-w-[150px]"><canvas id="chart-balanco"></canvas></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div class="fixed bottom-6 right-6 flex flex-col items-end gap-2 z-50">
+        <div id="caixa-chat" class="hidden w-80 p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-2xl flex flex-col gap-3">
+            <div class="flex justify-between items-center border-b pb-2 dark:border-slate-800">
+                <h3 class="text-xs font-bold text-purple-600 flex items-center gap-1"><i data-lucide="sparkles"></i> Consultor Financeiro</h3>
+                <button id="btn-minimizar-chat" class="text-slate-400"><i data-lucide="minus" class="w-4 h-4"></i></button>
+            </div>
+            <div id="chat-area" class="text-xs text-slate-600 dark:text-slate-400 h-24 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-950 rounded-xl">Digite "dica" para insights rápidos do seu consultor automático.</div>
+            <div class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="Pergunte..." class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-1 text-xs focus:outline-none">
+                <button id="btn-enviar-chat" class="bg-purple-600 text-white rounded-xl px-3 py-1 text-xs font-semibold hover:bg-purple-700 transition-all">Enviar</button>
+            </div>
+        </div>
+        <button id="btn-chat-trigger" class="w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full flex items-center justify-center shadow-xl shadow-purple-500/20 hover:scale-105 transition-all"><i data-lucide="message-square" class="w-5 h-5"></i></button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
