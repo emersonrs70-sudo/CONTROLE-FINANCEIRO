@@ -1,9 +1,16 @@
-// CONFIGURAÇÃO DO CLIENTE SUPABASE
-const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// CONFIGURAÇÃO DO CLIENTE SUPABASE (Inicialização Segura)
+const SUPABASE_URL = "SEU_SUPABASE_URL_AQUI";
+const SUPABASE_KEY = "SUA_SUPABASE_ANON_KEY_AQUI";
+let supabase;
 
-// CORE ENGINE V4.1.0 (Integrado com Supabase - Mantendo 100% da identidade visual)
+try {
+    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch(e) {
+    // Fallback caso a janela carregue em ordem trocada
+    supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+}
+
+// CORE ENGINE V4.1.1 (Correção de Inicialização e Graficos)
 let dataAncorada = new Date();
 let despesas = [];
 let receitas = [];
@@ -19,6 +26,15 @@ const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho"
 
 // CARREGAR DADOS EM TEMPO REAL DO SUPABASE
 async function carregarDadosSupabase() {
+    if (!supabase) {
+        if (window.supabase) {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } else {
+            console.error("Erro fatal: A biblioteca do Supabase não foi carregada no HTML.");
+            return;
+        }
+    }
+
     try {
         const { data: resReceitas, error: errRec } = await supabase.from('receitas').select('*');
         const { data: resDespesas, error: errDesp } = await supabase.from('despesas').select('*');
@@ -333,7 +349,13 @@ function renderizarLançamentos() {
 
     lucide.createIcons();
     renderizarProjetos(totalReceitas);
-    atualizarFiltrosEGráficos(despesasDoMes, totalReceitas, totalDespesas);
+    
+    // CORREÇÃO ORTOGRÁFICA: Evita o erro de função indefinida procurando por ambas as formas
+    if (typeof atualizarFiltrosEGráficos === 'function') {
+        atualizarFiltrosEGráficos(despesasDoMes, totalReceitas, totalDespesas);
+    } else if (typeof atualizarFiltrosEGraficos === 'function') {
+        atualizarFiltrosEGraficos(despesasDoMes, totalReceitas, totalDespesas);
+    }
 }
 
 function renderizarHistoricoGeral() {
@@ -369,6 +391,7 @@ function renderizarHistoricoGeral() {
 // SALVAR LANÇAMENTOS NO SUPABASE
 document.getElementById('form-movimentacao').onsubmit = async (e) => {
     e.preventDefault();
+    if (!supabase) return alert("Banco de dados não inicializado.");
     
     const idEdicao = document.getElementById('form-id-edicao') ? document.getElementById('form-id-edicao').value : '';
     const nome = document.getElementById('mov-nome').value;
@@ -405,6 +428,7 @@ document.getElementById('form-movimentacao').onsubmit = async (e) => {
 
 // EXCLUIR ITEM DO SUPABASE
 window.excluirItem = async function(id, fluxo) {
+    if(!supabase) return;
     if(!confirm("Tem certeza que deseja excluir este item?")) return;
     let tabela = fluxo === 'despesa' ? 'despesas' : 'receitas';
     try {
@@ -489,6 +513,7 @@ function renderizarProjetos(totalReceitasPeriodo) {
 
 document.getElementById('form-projeto').onsubmit = async (e) => {
     e.preventDefault();
+    if (!supabase) return;
     const nome = document.getElementById('proj-nome').value;
     const valor = parseFloat(document.getElementById('proj-valor').value);
     const dataAlvo = document.getElementById('proj-data').value ? new Date(document.getElementById('proj-data').value).toISOString() : new Date().toISOString();
@@ -504,6 +529,7 @@ document.getElementById('form-projeto').onsubmit = async (e) => {
 };
 
 window.excluirProjeto = async function(id) {
+    if (!supabase) return;
     if(!confirm("Deseja deletar este projeto de vida?")) return;
     try {
         const { error } = await supabase.from('projetos').delete().eq('id', id);
