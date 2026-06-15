@@ -1,220 +1,77 @@
-const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co"; // <-- COLOQUE SEU URL REAL AQUI
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs"; // <-- COLOQUE SUA ANON KEY REAL AQUI
+// CONFIGURAÇÃO DO SUPABASE
+const SUPABASE_URL = "https://uhvxrxqioovjvwjqbyes.supabase.co"; 
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs"; 
 
-let supabase;
-try {
-    if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } else {
-        console.error("Biblioteca do Supabase não encontrada no index.html.");
-    }
-} catch (e) {
-    console.error("Erro ao inicializar cliente Supabase:", e.message);
-}
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// CORE ENGINE V4.0.0 - INTEGRADO AO SUPABASE (ESTÁVEL)
+// Variáveis Globais
 let dataAncorada = new Date();
 let despesas = [];
 let receitas = [];
-let categoriasDisponiveis = JSON.parse(localStorage.getItem('fin_categorias')) || ["Moradia", "Alimentação", "Transporte", "Lazer"];
 let projetosProjetados = [];
-
+let categoriasDisponiveis = ["Moradia", "Alimentação", "Transporte", "Lazer"];
 let modoFormulario = "despesa"; 
 let filtroExtratoAtual = "todos"; 
 let categoriasSelecionadasGrafico = [...categoriasDisponiveis];
 let chart1, chart2, chart3;
 
-const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-// FUNÇÃO SINK ASSÍNCRONA COM O SUPABASE (Corrigida e Blindada contra datas nulas)
+// FUNÇÃO MESTRE: BUSCA DADOS NO BANCO
 async function carregarDadosSupabase() {
-    if (!supabase) return;
     try {
-        const { data: resReceitas, error: errRec } = await supabase.from('receitas').select('*');
-        const { data: resDespesas, error: errDesp } = await supabase.from('despesas').select('*');
-        const { data: resProjetos, error: errProj } = await supabase.from('projetos').select('*');
+        const [resD, resR, resP] = await Promise.all([
+            supabase.from('despesas').select('*'),
+            supabase.from('receitas').select('*'),
+            supabase.from('projetos').select('*')
+        ]);
 
-        if (errRec) throw errRec;
-        if (errDesp) throw errDesp;
-        if (errProj) throw errProj;
+        despesas = resD.data || [];
+        receitas = resR.data || [];
+        projetosProjetados = resP.data || [];
 
-        receitas = (resReceitas || []).map(r => {
-            const dataValida = r.data_criacao || new Date().toISOString();
-            return {
-                id: r.id, nome: r.nome || 'Sem Nome', valor: parseFloat(r.valor) || 0, categoria: 'Renda',
-                tipo: r.tipo || 'variavel', validadeAte: r.validadeate || null, dataCriacao: dataValida
-            };
-        });
-
-        despesas = (resDespesas || []).map(d => {
-            const dataValida = d.data_criacao || new Date().toISOString();
-            return {
-                id: d.id, nome: d.nome || 'Sem Nome', valor: parseFloat(d.valor) || 0, categoria: d.categoria || 'Outros',
-                tipo: d.tipo || 'variavel', validadeAte: d.validadeate || null, dataCriacao: dataValida
-            };
-        });
-
-        projetosProjetados = (resProjetos || []).map(p => {
-            const dataAlvoValida = p.data_alvo || new Date().toISOString();
-            return {
-                id: p.id, nome: p.nome || 'Sem Nome', valor: parseFloat(p.valor) || 0, dataAlvo: dataAlvoValida
-            };
-        });
-
+        // Chama a função que já existe no seu arquivo (que desenha a tela)
         atualizarInterfacePeriodo();
-    } catch (error) {
-        console.error("Erro ao carregar dados do Supabase:", error.message);
+    } catch (e) {
+        console.error("Erro ao carregar dados do Supabase:", e);
     }
 }
 
-function formatarDataBR(isoString) {
-    if(!isoString) return '';
-    const d = new Date(isoString);
-    if(isNaN(d.getTime())) return '';
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
-}
-
-function atualizarInterfacePeriodo() {
-    document.getElementById('txt-periodo-atual').innerText = `${mesesExtenso[dataAncorada.getMonth()]} ${dataAncorada.getFullYear()}`;
-    renderizarLançamentos();
-    renderizarHistoricoGeral();
-}
-
-function movimientoPertenceAoPeriodo(item, mesAlvo, anoAlvo) {
-    if (!item || !item.dataCriacao) return false;
-    const dataItem = new Date(item.dataCriacao);
-    if (isNaN(dataItem.getTime())) return false;
-
-    if (anoAlvo < dataItem.getFullYear() || (anoAlvo === dataItem.getFullYear() && mesAlvo < dataItem.getMonth())) return false;
+// FUNÇÃO DE SUBMIT CORRIGIDA
+document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
+    e.preventDefault();
+    const tabela = modoFormulario === 'despesa' ? 'despesas' : 'receitas';
     
-    if (item.tipo === 'variavel') {
-        return anoAlvo === dataItem.getFullYear() && mesAlvo === dataItem.getMonth();
-    }
-    if (item.tipo === 'fixo') {
-        if (item.validadeAte && typeof item.validadeAte === 'string') {
-            const partes = item.validadeAte.split('-');
-            if(partes.length >= 2) {
-                const anoLimite = Number(partes[0]);
-                const mesLimite = Number(partes[1]);
-                if (anoAlvo > anoLimite || (anoAlvo === anoLimite && mesAlvo > (mesLimite - 1))) return false;
-            }
-        }
-        return true;
-    }
-    return false;
-}
+    const novoItem = {
+        nome: document.getElementById('lancamento-nome').value,
+        valor: parseFloat(document.getElementById('lancamento-valor').value),
+        tipo: document.getElementById('despesa-tipo').value,
+        data_criacao: new Date().toISOString()
+    };
 
-function calcularSaldoRealHojeEstatico() {
-    const hoje = new Date();
-    const mesHoje = hoje.getMonth();
-    const anoHoje = hoje.getFullYear();
-
-    let todasDatas = [...despesas, ...receitas].map(x => new Date(x.dataCriacao)).filter(d => !isNaN(d.getTime()));
-    if (todasDatas.length === 0) return 0;
-
-    let menorData = new Date(Math.min(...todasDatas));
-    let dataVarredura = new Date(menorData.getFullYear(), menorData.getMonth(), 1);
-    let dataLimiteHoje = new Date(anoHoje, mesHoje + 1, 1);
-
-    let saldoCalculadoAtéHoje = 0;
-
-    while (dataVarredura < dataLimiteHoje) {
-        const vMes = dataVarredura.getMonth();
-        const vAno = dataVarredura.getFullYear();
-
-        const recs = receitas.filter(r => movimientoPertenceAoPeriodo(r, vMes, vAno));
-        const desps = despesas.filter(d => movimientoPertenceAoPeriodo(d, vMes, vAno));
-
-        saldoCalculadoAtéHoje += (recs.reduce((sum, r) => sum + r.valor, 0) - desps.reduce((sum, d) => sum + d.valor, 0));
-        dataVarredura.setMonth(dataVarredura.getMonth() + 1);
-    }
-    return saldoCalculadoAtéHoje;
-}
-
-function calcularProjecaoCascataAtePeriodo(mesAlvo, anoAlvo) {
-    const hoje = new Date();
-    const mesHoje = hoje.getMonth();
-    const anoHoje = hoje.getFullYear();
-
-    let ponteiroSaldoAcumulado = calcularSaldoRealHojeEstatico();
-
-    let todasDatas = [...despesas, ...receitas].map(x => new Date(x.dataCriacao)).filter(d => !isNaN(d.getTime()));
-    if (todasDatas.length === 0) return 0;
-
-    let menorData = new Date(Math.min(...todasDatas));
-    
-    let dataVarredura = new Date(anoHoje, mesHoje + 1, 1);
-    let dataDestinoAlvo = new Date(anoAlvo, mesAlvo + 1, 1);
-
-    if (dataDestinoAlvo <= dataVarredura) {
-        let saldoPassado = 0;
-        let scan = new Date(menorData.getFullYear(), menorData.getMonth(), 1);
-        let limiteSuperior = new Date(anoAlvo, mesAlvo + 1, 1);
-        while (scan < limiteSuperior) {
-            const m = scan.getMonth(); const a = scan.getFullYear();
-            saldoPassado += (receitas.filter(r => movimientoPertenceAoPeriodo(r, m, a)).reduce((s,r)=>s+r.valor,0) - despesas.filter(d => movimientoPertenceAoPeriodo(d, m, a)).reduce((s,d)=>s+d.valor,0));
-            scan.setMonth(scan.getMonth() + 1);
-        }
-        return saldoPassado;
+    if (modoFormulario === 'despesa') {
+        novoItem.categoria = document.getElementById('despesa-categoria').value;
     }
 
-    while (dataVarredura < dataDestinoAlvo) {
-        const vMes = dataVarredura.getMonth();
-        const vAno = dataVarredura.getFullYear();
-
-        const recsFuturas = receitas.filter(r => movimientoPertenceAoPeriodo(r, vMes, vAno));
-        const despsFuturas = despesas.filter(d => movimientoPertenceAoPeriodo(d, vMes, vAno));
-
-        ponteiroSaldoAcumulado += (recsFuturas.reduce((sum, r) => sum + r.valor, 0) - despsFuturas.reduce((sum, d) => sum + d.valor, 0));
-        dataVarredura.setMonth(dataVarredura.getMonth() + 1);
+    const { error } = await supabase.from(tabela).insert([novoItem]);
+    if (!error) {
+        e.target.reset();
+        carregarDadosSupabase(); // Recarrega tudo do banco após salvar
+    } else {
+        alert("Erro ao salvar: " + error.message);
     }
-
-    return ponteiroSaldoAcumulado;
-}
-
-window.abrirSubPainel = function(idAlvo) {
-    const paineis = ['saldo-real', 'saldo', 'receitas', 'despesas', 'metas'];
-    paineis.forEach(id => {
-        const elemento = document.getElementById(`subpainel-${id}`);
-        if (elemento) {
-            if (id === idAlvo) {
-                elemento.classList.toggle('hidden');
-                if (!elemento.classList.contains('hidden')) {
-                    elemento.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            } else {
-                elemento.classList.add('hidden');
-            }
-        }
-    });
 };
 
-window.atualizarSimuladorCortes = function() {
-    const sliderLazer = document.getElementById('slider-corte-lazer');
-    const sliderCompras = document.getElementById('slider-corte-compras');
-    
-    if (!sliderLazer || !sliderCompras) return;
+// FUNÇÃO DE EXCLUSÃO
+window.excluirItem = async function(id, fluxo) {
+    const tabela = fluxo === 'despesa' ? 'despesas' : 'receitas';
+    const { error } = await supabase.from(tabela).delete().eq('id', id);
+    if (!error) carregarDadosSupabase();
+};
 
-    const pctLazer = parseInt(sliderLazer.value);
-    const pctCompras = parseInt(sliderCompras.value);
-
-    document.getElementById('txt-corte-lazer-porcentagem').innerText = `${pctLazer}%`;
-    document.getElementById('txt-corte-compras-porcentagem').innerText = `${pctCompras}%`;
-
-    const mes = dataAncorada.getMonth();
-    const ano = dataAncorada.getFullYear();
-    const despesasDoMes = despesas.filter(d => movimientoPertenceAoPeriodo(d, mes, ano));
-
-    const totalLazerReal = despesasDoMes.filter(d => d.categoria === "Lazer").reduce((sum, d) => sum + d.valor, 0);
-    const totalComprasReal = despesasDoMes.filter(d => d.categoria === "Alimentação").reduce((sum, d) => sum + d.valor, 0);
-
-    const poupadoLazer = totalLazerReal * (pctLazer / 100);
-    const poupadoCompras = totalComprasReal * (pctCompras / 100);
-    const economiaTotalCalculada = poupadoLazer + poupadoCompras;
-
-    document.getElementById('txt-corte-lazer-poupado').innerText = `R$ ${poupadoLazer.toFixed(2)}`;
-    document.getElementById('txt-corte-compras-poupado').innerText = `R$ ${poupadoCompras.toFixed(2)}`;
-    document.getElementById('txt-corte-economia-total').innerText = `R$ ${economiaTotalCalculada.toFixed(2)}`;
+// AJUSTE NO ONLOAD
+window.onload = () => {
+    carregarDadosSupabase();
+    configurarAbasFormulario();
+    // ... manter aqui as outras chamadas que você já tinha
 };
 
 function renderizarLançamentos() {
