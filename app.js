@@ -1,4 +1,13 @@
 // CORE ENGINE V5.0.0 (Migrado para Supabase Cloud)
+
+// --- CONFIGURAÇÃO E INICIALIZAÇÃO INICIAL DO SUPABASE ---
+if (typeof supabase !== 'undefined' && !window.supabase) {
+    const _supabaseUrl = 'https://uhvxrxqioovjvwjqbyes.supabase.co'; 
+    const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs';
+    window.supabase = supabase.createClient(_supabaseUrl, _supabaseAnonKey);
+}
+
+// --- VARIÁVEIS GLOBAIS DO SISTEMA ---
 let dataAncorada = new Date();
 let despesas = [];
 let receitas = [];
