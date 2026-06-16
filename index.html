@@ -12,6 +12,14 @@
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Inicialização global do Supabase para o app.js utilizar
+        const _supabaseUrl = 'https://uhvxrxqioovjvwjqbyes.supabase.co';
+        const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodnhyeHFpb292anZ3anFieWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NTMxMjcsImV4cCI6MjA5NzAyOTEyN30.8RDULQ6XpN3WqLg7i_jrAFB4210gMD85HXWQO7yFIvs';
+        window.supabase = supabase.createClient(_supabaseUrl, _supabaseAnonKey);
+    </script>
+</head>
     <style>
         .grid-animado {
             transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1);
