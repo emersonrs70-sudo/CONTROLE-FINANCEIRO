@@ -244,7 +244,7 @@
         </section>
 
         <!-- ABA 2: TRANSACÕES (Formulário + Extratos) -->
-        <section id="secao-transacoes" class="mobile-tab hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section id="secao-transacoes" class="mobile-tab hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- Formulário Unificado de Lançamento -->
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4 self-start">
@@ -421,33 +421,7 @@
 
     <script src="app.js" defer></script>
 </body>
-</html>                <div onclick="abrirSubPainel('receitas')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-blue-500">
-                    <div class="flex justify-between items-start">
-                        <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Receitas do Período</p>
-                        <i data-lucide="arrow-up-circle" class="w-3.5 h-3.5 text-blue-500"></i>
-                    </div>
-                    <p id="card-receitas" class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">+ R$ 0,00</p>
-                </div>
-
-                <div onclick="abrirSubPainel('despesas')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-rose-500">
-                    <div class="flex justify-between items-start">
-                        <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Despesas do Período</p>
-                        <i data-lucide="arrow-down-circle" class="w-3.5 h-3.5 text-rose-500"></i>
-                    </div>
-                    <p id="card-despesas" class="text-xl font-bold text-red-600 dark:text-red-400 mt-1">- R$ 0,00</p>
-                </div>
-
-                <div onclick="abrirSubPainel('metas')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-indigo-500">
-                    <div class="flex justify-between items-start">
-                        <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Metas de Sonhos</p>
-                        <i data-lucide="rocket" class="w-3.5 h-3.5 text-indigo-500"></i>
-                    </div>
-                    <div class="flex items-center justify-between mt-1">
-                        <p id="card-meta-txt" class="text-xl font-bold text-purple-600 dark:text-purple-400">0%</p>
-                        <span class="text-[9px] bg-purple-100 dark:bg-purple-950 px-1.5 py-0.5 rounded-full font-semibold text-purple-600">Alvo</span>
-                    </div>
-                </div>
-            </div>
+</html>                
 
             <!-- Subpainéis Dinâmicos de Detalhes -->
             <div id="container-subpaineis" class="space-y-4">
