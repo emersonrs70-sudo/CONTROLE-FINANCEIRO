@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gerenciador Financeiro Premium v5.2</title>
+    <title>Gerenciador Financeiro Premium v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -24,6 +24,7 @@
         .grid-animado {
             transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        /* Ocultar barra de rolagem estética */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -35,15 +36,12 @@
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen font-sans antialiased transition-colors duration-300 pb-20 md:pb-4">
 
-    <!-- Container de Toasts de Feedback Visual -->
-    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col gap-2 w-full max-w-xs px-4"></div>
-
     <!-- Header Fixo -->
-    <header class="w-full bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-4 sticky top-0 z-40 shadow-sm">
+    <header class="w-full bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-4 sticky top-0 z-45 shadow-sm">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-purple-500/20">F</div>
-                <h1 class="text-base font-bold tracking-tight">Fintech<span class="text-purple-600">Core</span> <span class="text-[10px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-md ml-1 font-normal">v5.2</span></h1>
+                <h1 class="text-base font-bold tracking-tight">Fintech<span class="text-purple-600">Core</span> <span class="text-[10px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-md ml-1 font-normal">v5.0</span></h1>
             </div>
             <div class="flex items-center justify-between w-full sm:w-auto gap-3">
                 <div class="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 flex-1 sm:flex-none">
@@ -52,54 +50,46 @@
                     <button id="btn-mes-seguinte" class="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     <button id="btn-mes-atual" class="text-[10px] bg-white dark:bg-slate-800 px-2 py-1.5 rounded-md ml-1 hover:bg-slate-200 shadow-sm font-medium transition-all">Hoje</button>
                 </div>
-                
-                <!-- Área de Interação Rápida no Header -->
-                <div class="flex items-center gap-2">
-                    <!-- Widget de Streak Diário -->
-                    <div id="streak-container" class="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-amber-200 dark:border-amber-900/40 shadow-sm transition-all duration-300">
-                        <i data-lucide="flame" class="w-3.5 h-3.5 animate-pulse"></i> <span>0 dias</span>
-                    </div>
-                    <button id="btn-tema" class="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all shadow-sm">
-                        <i id="icone-tema" data-lucide="sun" class="w-4 h-4"></i>
-                    </button>
-                </div>
+                <button id="btn-tema" class="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all shadow-sm">
+                    <i id="icone-tema" data-lucide="sun" class="w-4 h-4"></i>
+                </button>
             </div>
         </div>
     </header>
 
+    <!-- CONTAINER PRINCIPAL COM LAYOUT MOBILE ADAPTATIVO -->
     <div class="max-w-7xl mx-auto px-4 md:px-6 mt-4 space-y-6">
         
-        <!-- ABA 1: PAINEL / DASHBOARD -->
+        <!-- ABA 1: PAINEL / DASHBOARD (Exibido por padrão no mobile) -->
         <section id="secao-dashboard" class="mobile-tab space-y-4">
             
-            <!-- Banner de Status (Lembretes/Nudges de Registro) -->
-            <div id="status-geral-banner" class="p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm transition-all duration-300">
+            <!-- Banner de Status -->
+            <div id="status-geral-banner" class="p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
                 <div class="flex flex-col">
                     <h3 id="status-geral-titulo" class="text-sm font-bold tracking-tight">Analisando ecossistema...</h3>
                     <p id="status-geral-desc" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Calculando fluxos orçamentários do período.</p>
                 </div>
             </div>
 
-            <!-- Grid de Cards de Métricas -->
+            <!-- Grid de Cards de Métricas (Responsivo de 1 a 5 colunas) -->
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-                <div id="wrapper-saldo-real" onclick="abrirSubPainel('saldo-real')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-emerald-500 col-span-2 sm:col-span-1 duration-300">
+                <div onclick="abrirSubPainel('saldo-real')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-emerald-500 col-span-2 sm:col-span-1">
                     <div class="flex justify-between items-start">
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Disponível Hoje</p>
                         <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-500"></i>
                     </div>
-                    <p id="card-saldo-real" class="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 transition-all duration-300">R$ 0,00</p>
+                    <p id="card-saldo-real" class="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">R$ 0,00</p>
                 </div>
 
-                <div id="wrapper-saldo" onclick="abrirSubPainel('saldo')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-purple-500 duration-300">
+                <div onclick="abrirSubPainel('saldo')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-purple-500">
                     <div class="flex justify-between items-start">
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Projeção Fim do Mês</p>
                         <i data-lucide="trending-up" class="w-3.5 h-3.5 text-purple-500"></i>
                     </div>
-                    <p id="card-saldo" class="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 transition-all duration-300">R$ 0,00</p>
+                    <p id="card-saldo" class="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">R$ 0,00</p>
                 </div>
 
-                <!-- Cards com interatividade removida (pois os subpainéis correspondentes foram excluídos) -->
-                <div class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm border-l-[4px] border-l-blue-500 select-none">
+                <div onclick="abrirSubPainel('receitas')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-blue-500">
                     <div class="flex justify-between items-start">
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Receitas do Período</p>
                         <i data-lucide="arrow-up-circle" class="w-3.5 h-3.5 text-blue-500"></i>
@@ -107,7 +97,7 @@
                     <p id="card-receitas" class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">+ R$ 0,00</p>
                 </div>
 
-                <div class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm border-l-[4px] border-l-rose-500 select-none">
+                <div onclick="abrirSubPainel('despesas')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-rose-500">
                     <div class="flex justify-between items-start">
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Despesas do Período</p>
                         <i data-lucide="arrow-down-circle" class="w-3.5 h-3.5 text-rose-500"></i>
@@ -115,7 +105,7 @@
                     <p id="card-despesas" class="text-xl font-bold text-red-600 dark:text-red-400 mt-1">- R$ 0,00</p>
                 </div>
 
-                <div class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm border-l-[4px] border-l-indigo-500 select-none">
+                <div onclick="abrirSubPainel('metas')" class="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-95 border-l-[4px] border-l-indigo-500">
                     <div class="flex justify-between items-start">
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Metas de Sonhos</p>
                         <i data-lucide="rocket" class="w-3.5 h-3.5 text-indigo-500"></i>
@@ -172,11 +162,80 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Subpainel: B-A-BA de Investimentos -->
+                <div id="subpainel-receitas" class="hidden p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-850 rounded-2xl border border-blue-200 dark:border-slate-800 space-y-4 shadow-sm">
+                    <div class="border-b pb-2 dark:border-slate-800">
+                        <h4 class="text-xs font-bold text-blue-900 dark:text-blue-400 flex items-center gap-2"><i data-lucide="graduation-cap" class="w-4 h-4 text-blue-600"></i> B-A-BA dos Investimentos: Projeção Anual</h4>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-2 text-[11px]">
+                            <div><h5 class="font-bold text-slate-400">Poupança Antiga</h5><p class="text-slate-500 mt-0.5">Retorno abaixo da inflação real.</p></div>
+                            <div class="border-t pt-2 dark:border-slate-800 font-medium">Rendimento Projetado: <span id="txt-ba-poupanca" class="text-red-500 font-bold">R$ 0,00</span></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-blue-200 dark:border-slate-800 flex flex-col justify-between gap-2 text-[11px] border-t-4 border-t-blue-500">
+                            <div><h5 class="font-bold text-blue-600">CDB 100% do CDI</h5><p class="text-slate-500 mt-0.5">Seguro e ideal para sua reserva.</p></div>
+                            <div class="border-t pt-2 dark:border-slate-800 font-medium">Rendimento Projetado: <span id="txt-ba-cdb" class="text-emerald-500 font-bold">R$ 0,00</span></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-2 text-[11px]">
+                            <div><h5 class="font-bold text-indigo-600">Tesouro Selic</h5><p class="text-slate-500 mt-0.5">Proteção soberana garantida.</p></div>
+                            <div class="border-t pt-2 dark:border-slate-800 font-medium">Rendimento Projetado: <span id="txt-ba-selic" class="text-emerald-500 font-bold">R$ 0,00</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subpainel: Cortador de Gordura -->
+                <div id="subpainel-despesas" class="hidden p-5 bg-gradient-to-br from-red-50 to-orange-50 dark:from-slate-900 dark:to-slate-850 rounded-2xl border border-red-200 dark:border-slate-800 space-y-4 shadow-sm">
+                    <div class="border-b pb-2 dark:border-slate-800 flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-red-800 dark:text-red-400 flex items-center gap-2"><i data-lucide="scissors" class="w-4 h-4"></i> O Cortador de Gordura</h4>
+                        <div class="text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-950/50 px-2 py-0.5 rounded-md">Economia: <span id="txt-corte-economia-total">R$ 0,00</span></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                            <div class="flex justify-between font-medium"><span>🍿 Lazer e Delivery</span><span id="txt-corte-lazer-porcentagem" class="text-red-500 font-bold">0%</span></div>
+                            <input type="range" id="slider-corte-lazer" min="0" max="50" step="5" value="0" oninput="atualizarSimuladorCortes()" class="w-full accent-red-500 h-2 bg-slate-200 rounded-lg cursor-pointer">
+                            <div class="text-right text-[10px] text-slate-400">Poupado: <span id="txt-corte-lazer-poupado" class="text-emerald-600 font-bold">R$ 0,00</span></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                            <div class="flex justify-between font-medium"><span>🛒 Compras Supérfluas</span><span id="txt-corte-compras-porcentagem" class="text-red-500 font-bold">0%</span></div>
+                            <input type="range" id="slider-corte-compras" min="0" max="50" step="5" value="0" oninput="atualizarSimuladorCortes()" class="w-full accent-red-500 h-2 bg-slate-200 rounded-lg cursor-pointer">
+                            <div class="text-right text-[10px] text-slate-400">Poupado: <span id="txt-corte-compras-poupado" class="text-emerald-600 font-bold">R$ 0,00</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Subpainel: Planejador de Sonhos Multimetas -->
+                <div id="subpainel-metas" class="hidden p-5 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-slate-900 dark:to-slate-850 rounded-2xl border border-purple-200 dark:border-slate-800 space-y-4 shadow-sm">
+                    <h4 class="text-xs font-bold text-purple-600 flex items-center gap-1.5"><i data-lucide="rocket" class="w-4 h-4"></i> Planejador de Sonhos Multimetas</h4>
+                    <form id="form-projeto" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                        <div>
+                            <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">Meta/Sonho</label>
+                            <input type="text" id="proj-nome" placeholder="Ex: Viagem, Notebook" required class="w-full bg-white border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">Custo Total (R$)</label>
+                            <input type="number" id="proj-valor" placeholder="R$ 5000" required class="w-full bg-white border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">Prazo Alvo</label>
+                            <input type="date" id="proj-data" required class="w-full bg-white border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <button type="submit" class="w-full bg-purple-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-purple-700 transition-colors shadow-sm h-[38px] flex items-center justify-center">Projetar Meta</button>
+                    </form>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 text-[10px] uppercase font-bold bg-slate-50 dark:bg-slate-900"><th class="p-3">Projeto</th><th class="p-3">Meta Alvo</th><th class="p-3">Prazo</th><th class="p-3">Aporte Sugerido</th><th class="p-3 text-center">Ação</th></tr>
+                            </thead>
+                            <tbody id="tabela-projetos-corpo" class="text-xs"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- ABA 2: TRANSACÕES (Formulário + Extratos) -->
-        <section id="secao-transacoes" class="mobile-tab hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- ABA 2: TRANSACÕES (Lançamentos + Extrato do Período + Busca Geral) -->
+        <section id="secao-transacoes" class="mobile-tab hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- Formulário Unificado de Lançamento -->
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4 self-start">
@@ -192,21 +251,10 @@
                         <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Descrição</label>
                         <input type="text" id="lancamento-nome" required placeholder="Ex: Supermercado, Aluguel" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
                     </div>
-                    
-                    <!-- Campo de Valor com Atalhos Rápidos Integrados -->
                     <div>
                         <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Valor (R$)</label>
-                        <input type="number" step="0.01" id="lancamento-valor" required placeholder="0.00" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300">
-                        
-                        <!-- Atalhos de Valor Rápidos para Mobile -->
-                        <div class="flex gap-1.5 mt-2">
-                            <button type="button" onclick="adicionarValorRapido(5)" class="flex-1 py-2 text-[10px] font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all border border-slate-200 dark:border-slate-700 active:scale-95">+R$ 5</button>
-                            <button type="button" onclick="adicionarValorRapido(20)" class="flex-1 py-2 text-[10px] font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all border border-slate-200 dark:border-slate-700 active:scale-95">+R$ 20</button>
-                            <button type="button" onclick="adicionarValorRapido(50)" class="flex-1 py-2 text-[10px] font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all border border-slate-200 dark:border-slate-700 active:scale-95">+R$ 50</button>
-                            <button type="button" onclick="adicionarValorRapido(100)" class="flex-1 py-2 text-[10px] font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all border border-slate-200 dark:border-slate-700 active:scale-95">+R$ 100</button>
-                        </div>
+                        <input type="number" step="0.01" id="lancamento-valor" required placeholder="0.00" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
                     </div>
-
                     <div>
                         <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Data de Competência</label>
                         <input type="date" id="lancamento-data" required class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500">
@@ -218,6 +266,7 @@
                         </div>
                         <select id="despesa-categoria" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"></select>
                     </div>
+                    <!-- Nova Categoria Rápida -->
                     <div id="bloco-nova-categoria" class="hidden">
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Nova Categoria</label>
@@ -257,12 +306,15 @@
                 
                 <div id="container-alertas-gargalo" class="hidden p-3.5 bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300 text-xs rounded-xl border border-red-200 dark:border-red-900/40 font-semibold"></div>
                 
+                <!-- Lista de Lançamentos Flex (Mobile) / Tabela (Desktop) -->
                 <div class="overflow-x-auto rounded-xl">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 text-[10px] uppercase font-black bg-slate-50 dark:bg-slate-950/40"><th class="p-3">Data</th><th class="p-3">Nome</th><th class="p-3">Categoria</th><th class="p-3 text-right">Valor</th><th class="p-3 text-center">Ações</th></tr>
                         </thead>
-                        <tbody id="tabela-extrato-unificado-corpo" class="text-xs divide-y divide-slate-100 dark:divide-slate-800/50"></tbody>
+                        <tbody id="tabela-extrato-unificado-corpo" class="text-xs divide-y divide-slate-100 dark:divide-slate-800/50">
+                            <!-- Inserção Dinâmica -->
+                        </tbody>
                     </table>
                 </div>
                 
