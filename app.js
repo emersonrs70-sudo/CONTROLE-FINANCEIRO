@@ -190,9 +190,9 @@ function mudarAbaMobile(idAba) {
     if (secaoAtiva) {
         secaoAtiva.classList.remove('hidden');
         if (idAba === 'transacoes') {
-            secaoAtiva.classList.add('md:grid');
+            secaoAtiva.classList.add('grid');
         } else {
-            secaoAtiva.classList.add('md:block');
+            secaoAtiva.classList.add('block');
         }
     }
 
@@ -201,9 +201,24 @@ function mudarAbaMobile(idAba) {
         const btn = document.getElementById(`nav-btn-${aba}`);
         if(btn) {
             if(aba === idAba) {
-                btn.className = "flex flex-col items-center gap-0.5 text-purple-600 font-black transition-all";
+                btn.className = "flex flex-col items-center gap-0.5 text-purple-600 dark:text-purple-400 font-black transition-all duration-300 scale-105";
+                if (icon) {
+                    icon.classList.add('scale-110', 'text-purple-600', 'dark:text-purple-400');
+                    // Executa um efeito físico leve de toque ("pop") no ícone selecionado
+                    icon.animate([
+                        { transform: 'scale(1)' },
+                        { transform: 'scale(1.25)' },
+                        { transform: 'scale(1)' }
+                    ], {
+                        duration: 300,
+                        easing: 'ease-out'
+                    });
+                }
             } else {
-                btn.className = "flex flex-col items-center gap-0.5 text-slate-400 dark:text-slate-600 transition-all";
+                btn.className = "flex flex-col items-center gap-0.5 text-slate-400 dark:text-slate-600 transition-all duration-300";
+                if (icon) {
+                    icon.classList.remove('scale-110', 'text-purple-600', 'dark:text-purple-400');
+                }
             }
         }
     });
