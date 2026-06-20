@@ -1,4 +1,4 @@
-// CORE ENGINE V5.0.0 - OTIMIZADO PARA MOBILE E INTEGRADO AO SUPABASE
+// CORE ENGINE V5.1.0 - CONTROLE COMPORTAMENTAL E ENGAGAMENTO MOBILE
 
 // --- INICIALIZAÇÃO DO CLIENTE SUPABASE ---
 if (typeof supabase !== 'undefined' && !window.supabase) {
@@ -7,7 +7,7 @@ if (typeof supabase !== 'undefined' && !window.supabase) {
     window.supabase = supabase.createClient(_supabaseUrl, _supabaseAnonKey);
 }
 
-// --- VARIÁVEIS DE ESTADO DO SISTEMA ---
+// --- VARIÁVEIS DE ESTADO ---
 let dataAncorada = new Date();
 let despesas = [];
 let receitas = [];
@@ -22,7 +22,7 @@ let chart1, chart2, chart3;
 
 const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-// --- AUXILIARES E FORMATADORES ---
+// --- FORMATADORES ---
 function formatarDataBR(isoString) {
     if(!isoString) return '';
     const d = new Date(isoString);
@@ -33,7 +33,153 @@ function formatarMoeda(valor) {
     return `R$ ${parseFloat(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// --- CONTROLE DE NAVEGAÇÃO DE ABAS (MOBILE) ---
+// --- PONTO 1: ATALHOS RÁPIDOS DE VALOR ---
+window.adicionarValorRapido = function(valor) {
+    const input = document.getElementById('lancamento-valor');
+    if(!input) return;
+    const valorAtual = parseFloat(input.value) || 0;
+    input.value = (valorAtual + valor).toFixed(2);
+    
+    // Feedback visual local no input de valor
+    input.classList.add('ring-2', 'ring-purple-500');
+    setTimeout(() => input.classList.remove('ring-2', 'ring-purple-500'), 250);
+};
+
+// --- PONTO 3: GRATIFICAÇÃO VISUAL IMEDIATA (TOAST SYSTEM) ---
+window.mostrarToast = function(mensagem, tipo = 'sucesso') {
+    const container = document.getElementById('toast-container');
+    if(!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-xs font-bold transition-all duration-300 opacity-0 translate-y-2 pointer-events-auto bg-white dark:bg-slate-900 ${
+        tipo === 'sucesso' 
+        ? 'border-emerald-200 dark:border-emerald-950 text-emerald-600 dark:text-emerald-400' 
+        : 'border-blue-200 dark:border-blue-950 text-blue-600 dark:text-blue-400'
+    }`;
+
+    const icon = tipo === 'sucesso' ? 'sparkles' : 'bell';
+    toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i> <span>${mensagem}</span>`;
+    container.appendChild(toast);
+    lucide.createIcons();
+
+    // Animar Entrada
+    setTimeout(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+    }, 50);
+
+    // Animar Saída e Remover
+    setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+};
+
+function piscarElemento(id) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.add('ring-4', 'ring-purple-500/50', 'scale-105');
+    setTimeout(() => {
+        el.classList.remove('ring-4', 'ring-purple-500/50', 'scale-105');
+    }, 500);
+}
+
+// --- CONTROLE COM PORTAMENTAL: CÁLCULO DE STREAK DIÁRIO ---
+function calcularStreakDiario() {
+    const todasDatas = [
+        ...despesas.map(d => d.data),
+        ...receitas.map(r => r.data)
+    ].filter(Boolean);
+
+    if (todasDatas.length === 0) return 0;
+
+    // Eliminar datas duplicadas e organizar de forma decrescente
+    const datasUnicas = [...new Set(todasDatas)].sort((a, b) => new Date(b) - new Date(a));
+
+    const hoje = new Date();
+    const formatarLocalDate = (date) => {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const hojeStr = formatarLocalDate(hoje);
+    const ontem = new Date(hoje);
+    ontem.setDate(hoje.getDate() - 1);
+    const ontemStr = formatarLocalDate(ontem);
+
+    // Se o último registro foi antes de ontem, o streak quebrou
+    if (datasUnicas[0] < ontemStr && datasUnicas[0] !== hojeStr) {
+        return 0;
+    }
+
+    let streak = 0;
+    let dataEsperada = new Date(datasUnicas[0]); 
+
+    for (let i = 0; i < datasUnicas.length; i++) {
+        const dataAtualStr = datasUnicas[i];
+        const dataEsperadaStr = formatarLocalDate(dataEsperada);
+
+        if (dataAtualStr === dataEsperadaStr) {
+            streak++;
+            dataEsperada.setDate(dataEsperada.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+    return streak;
+}
+
+function atualizarUIStreak() {
+    const streak = calcularStreakDiario();
+    const container = document.getElementById('streak-container');
+    if (!container) return;
+
+    if (streak > 0) {
+        container.className = "flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-amber-200 dark:border-amber-900/40 shadow-sm transition-all duration-300";
+        container.innerHTML = `<i data-lucide="flame" class="w-3.5 h-3.5 text-amber-500 fill-amber-500 animate-pulse"></i> <span>${streak} ${streak === 1 ? 'dia' : 'dias'}</span>`;
+    } else {
+        container.className = "flex items-center gap-1 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300";
+        container.innerHTML = `<i data-lucide="flame-kindling" class="w-3.5 h-3.5"></i> <span>0 dias</span>`;
+    }
+    lucide.createIcons();
+}
+
+// --- PONTO 4: LEMBRETES E NUDGES DE COMPORTAMENTO ---
+function atualizarNudgesHoje() {
+    const hoje = new Date();
+    const hojeStr = hoje.toISOString().split('T')[0];
+    
+    const registrouHoje = [
+        ...despesas.map(d => d.data),
+        ...receitas.map(r => r.data)
+    ].includes(hojeStr);
+
+    const statusBanner = document.getElementById('status-geral-banner');
+    const statusTitulo = document.getElementById('status-geral-titulo');
+    const statusDesc = document.getElementById('status-geral-desc');
+    const streak = calcularStreakDiario();
+
+    if (!registrouHoje) {
+        // Alerta amigável de incentivo
+        statusBanner.className = "p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50/50 border-amber-200 dark:bg-slate-900/40 dark:border-amber-950/40 shadow-sm transition-all duration-300";
+        statusTitulo.innerHTML = `<span class="text-amber-600 dark:text-amber-400 flex items-center gap-1.5"><i data-lucide="flame" class="w-4 h-4 fill-amber-500"></i> Proteja seu Streak Diário!</span>`;
+        statusDesc.innerText = streak > 0 
+            ? `Você ainda não anotou seus gastos de hoje. Registre qualquer lançamento para garantir seu streak de ${streak} ${streak === 1 ? 'dia' : 'dias'}!`
+            : `Mantenha o controle sob rédeas curtas. Faça seu primeiro registro do dia e ative sua chama de hábito!`;
+    } else {
+        // Sucesso
+        statusBanner.className = "p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm transition-all duration-300";
+        statusTitulo.innerHTML = `<span class="text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5"><i data-lucide="check-circle" class="w-4 h-4"></i> Organização em dia!</span>`;
+        statusDesc.innerText = streak > 0
+            ? `Seu streak de ${streak} ${streak === 1 ? 'dia' : 'dias'} está assegurado hoje. Excelente rotina financeira!`
+            : `Sua saúde financeira agradece. Dados salvos com sucesso!`;
+    }
+    lucide.createIcons();
+}
+
+// --- NAVEGAÇÃO DE ABAS (MOBILE) ---
 function mudarAbaMobile(idAba) {
     document.querySelectorAll('.mobile-tab').forEach(secao => {
         secao.classList.add('hidden');
@@ -50,7 +196,6 @@ function mudarAbaMobile(idAba) {
         }
     }
 
-    // Atualização estética da barra inferior
     const abas = ['dashboard', 'transacoes', 'planejador'];
     abas.forEach(aba => {
         const btn = document.getElementById(`nav-btn-${aba}`);
@@ -63,13 +208,12 @@ function mudarAbaMobile(idAba) {
         }
     });
 
-    // Forçar atualização do tamanho de gráficos ao abrir aba correspondente
     if (idAba === 'planejador') {
         setTimeout(renderizarGraficos, 100);
     }
 }
 
-// --- INTEGRAÇÃO COM BANCO DE DADOS SUPABASE ---
+// --- CARREGAMENTO DO SUPABASE ---
 async function carregarDadosDoSupabase() {
     try {
         const { data: catData } = await supabase.from('fin_categorias').select('nome');
@@ -89,11 +233,10 @@ async function carregarDadosDoSupabase() {
         inicializarComponentesSelect();
         atualizarInterfacePeriodo();
     } catch (err) {
-        console.error("Erro ao conectar e sincronizar dados com o Supabase:", err);
+        console.error("Erro ao sincronizar do Supabase:", err);
     }
 }
 
-// --- FUNÇÃO CENTRAL DE ATUALIZAÇÃO DA TELA ---
 function atualizarInterfacePeriodo() {
     document.getElementById('txt-periodo-atual').innerText = `${mesesExtenso[dataAncorada.getMonth()]} ${dataAncorada.getFullYear()}`;
     
@@ -103,6 +246,10 @@ function atualizarInterfacePeriodo() {
     renderizarHistoricoGeral();
     renderizarGraficos();
     atualizarAnalisesCalculadas();
+    
+    // Atualização dos Gatilhos de Comportamento
+    atualizarUIStreak();
+    atualizarNudgesHoje();
 }
 
 function inicializarComponentesSelect() {
@@ -143,7 +290,6 @@ function atualizarCardsTopo() {
     const totalReceitas = filtrarPorMes(receitas).reduce((acc, cur) => acc + cur.valor, 0);
     const saldoProjetado = totalReceitas - totalDespesas;
 
-    // Calcular o saldo em tempo real (Total de receitas acumuladas - Despesas acumuladas de todo o histórico)
     const saldoHistoricoReal = receitas.reduce((acc, r) => acc + r.valor, 0) - despesas.reduce((acc, d) => acc + d.valor, 0);
 
     document.getElementById('card-receitas').innerText = `+ R$ ${totalReceitas.toFixed(2)}`;
@@ -153,12 +299,11 @@ function atualizarCardsTopo() {
     const cardSaldoProj = document.getElementById('card-saldo');
     cardSaldoProj.innerText = formatarMoeda(saldoProjetado);
     if(saldoProjetado < 0) {
-        cardSaldoProj.className = "text-xl font-bold text-red-500 mt-1";
+        cardSaldoProj.className = "text-xl font-bold text-red-500 mt-1 transition-all duration-300";
     } else {
-        cardSaldoProj.className = "text-xl font-bold text-emerald-500 mt-1";
+        cardSaldoProj.className = "text-xl font-bold text-emerald-500 mt-1 transition-all duration-300";
     }
 
-    // Atualização das metas consolidadas
     const cardMetaTxt = document.getElementById('card-meta-txt');
     if (projetosProjetados.length > 0) {
         const totalMetas = projetosProjetados.reduce((acc, p) => acc + p.valor, 0);
@@ -169,7 +314,7 @@ function atualizarCardsTopo() {
     }
 }
 
-// --- SUBPAINÉIS E CALCULADORES ---
+// --- SUBPAINÉIS ---
 function abrirSubPainel(tipo) {
     const paineis = ['saldo-real', 'saldo', 'receitas', 'despesas', 'metas'];
     paineis.forEach(p => {
@@ -195,7 +340,7 @@ function calcularSubPainelEspecifico(tipo) {
         const limiteDiario = Math.max(0, saldoReal / diasRestantes);
         document.getElementById('txt-hardcore-limite').innerText = formatarMoeda(limiteDiario);
 
-        const percentCaixa = Math.min((saldoReal / 3000) * 100, 100); // 3k como patamar básico de energia de caixa
+        const percentCaixa = Math.min((saldoReal / 3000) * 100, 100);
         document.getElementById('txt-hardcore-porcentagem').innerText = `${Math.max(0, percentCaixa).toFixed(0)}%`;
         document.getElementById('barra-hardcore-vida').style.width = `${Math.max(0, percentCaixa)}%`;
         
@@ -222,7 +367,6 @@ function calcularSubPainelEspecifico(tipo) {
         const saldoHistoricoReal = receitas.reduce((acc, r) => acc + r.valor, 0) - despesas.reduce((acc, d) => acc + d.valor, 0);
         const baseCalculo = Math.max(0, saldoHistoricoReal);
 
-        // Rendimentos anuais projetados
         document.getElementById('txt-ba-poupanca').innerText = formatarMoeda(baseCalculo * 0.0617);
         document.getElementById('txt-ba-cdb').innerText = formatarMoeda(baseCalculo * 0.105);
         document.getElementById('txt-ba-selic').innerText = formatarMoeda(baseCalculo * 0.1075);
@@ -244,7 +388,6 @@ function atualizarSimuladorCortes() {
     });
 
     const gastoLazer = despMes.filter(d => d.categoria === 'Lazer').reduce((acc, cur) => acc + cur.valor, 0);
-    const gastoAlimentacao = despMes.filter(d => d.categoria === 'Alimentação').reduce((acc, cur) => acc + cur.valor, 0);
     const gastoComprasGeral = despMes.filter(d => d.categoria !== 'Moradia' && d.categoria !== 'Lazer' && d.categoria !== 'Alimentação').reduce((acc, cur) => acc + cur.valor, 0);
 
     const poupadoLazer = gastoLazer * (sliderLazer / 100);
@@ -255,7 +398,7 @@ function atualizarSimuladorCortes() {
     document.getElementById('txt-corte-economia-total').innerText = formatarMoeda(poupadoLazer + poupadoCompras);
 }
 
-// --- RENDERIZAÇÃO DOS EXTRATOS E HISTÓRICOS ---
+// --- RENDERIZAÇÃO DE TABELAS ---
 function renderizarLancamentosExtrato() {
     const container = document.getElementById('tabela-extrato-unificado-corpo');
     container.innerHTML = '';
@@ -312,8 +455,6 @@ function renderizarProjetos() {
         container.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 text-[11px]">Nenhum projeto planejado.</td></tr>`;
         return;
     }
-
-    const saldoHistoricoReal = receitas.reduce((acc, r) => acc + r.valor, 0) - despesas.reduce((acc, d) => acc + d.valor, 0);
 
     projetosProjetados.forEach(p => {
         const tr = document.createElement('tr');
@@ -383,7 +524,6 @@ function renderizarHistoricoGeral() {
     });
 }
 
-// --- ANÁLISES AUTOMÁTICAS ---
 function atualizarAnalisesCalculadas() {
     const mes = dataAncorada.getMonth();
     const ano = dataAncorada.getFullYear();
@@ -415,7 +555,6 @@ function atualizarAnalisesCalculadas() {
 
     document.getElementById('txt-maiores-gargalos').innerText = `Seu maior foco de consumo este mês é em "${maiorCategoria}" com um total de ${formatarMoeda(maiorValor)}.`;
     
-    // Alerta caso o gasto dessa maior categoria ultrapasse um limite de R$ 1.500,00
     const alertaGargalo = document.getElementById('container-alertas-gargalo');
     if (maiorValor > 1500) {
         alertaGargalo.classList.remove('hidden');
@@ -426,7 +565,7 @@ function atualizarAnalisesCalculadas() {
     }
 }
 
-// --- CONFIGURAÇÃO DE GRÁFICOS (CHART.JS) ---
+// --- GRÁFICOS (CHART.JS) ---
 function renderizarGraficos() {
     const mes = dataAncorada.getMonth();
     const ano = dataAncorada.getFullYear();
@@ -444,7 +583,6 @@ function renderizarGraficos() {
     const totalDespesas = despMes.reduce((acc, cur) => acc + cur.valor, 0);
     const totalReceitas = recMes.reduce((acc, cur) => acc + cur.valor, 0);
 
-    // Gráfico 1: Categorias (Rosca)
     const dadosPizza = categoriasDisponiveis.map(cat => {
         return despMes.filter(d => d.categoria === cat).reduce((acc, cur) => acc + cur.valor, 0);
     });
@@ -469,7 +607,6 @@ function renderizarGraficos() {
         });
     }
 
-    // Gráfico 2: Evolução Acumulada Diária (Linha)
     if(chart2) chart2.destroy();
     const ctx2 = document.getElementById('chartEvolucao');
     if(ctx2) {
@@ -510,7 +647,6 @@ function renderizarGraficos() {
         });
     }
 
-    // Gráfico 3: Proporção Entrada vs Saída (Barras)
     if(chart3) chart3.destroy();
     const ctx3 = document.getElementById('chartProporcao');
     if(ctx3) {
@@ -534,7 +670,7 @@ function renderizarGraficos() {
     }
 }
 
-// --- INTERAÇÕES DE CATEGORIA ---
+// --- CATEGORIAS ---
 function alternarNovaCategoria(mostrar) {
     if (mostrar) {
         document.getElementById('bloco-select-categoria').classList.add('hidden');
@@ -556,14 +692,14 @@ async function criarCategoriaRapida() {
             nomeInput.value = '';
             alternarNovaCategoria(false);
             
-            // Auto selecionar a criada recentemente
             const select = document.getElementById('despesa-categoria');
             select.value = novaCat;
+            mostrarToast("Categoria criada!", "sucesso");
         }
     }
 }
 
-// --- CONTROLE DOS FORMULÁRIOS ---
+// --- FORMULÁRIOS ---
 function configurarAbasFormulario() {
     const btnDesp = document.getElementById('tab-despesa');
     const btnRec = document.getElementById('tab-receita');
@@ -599,7 +735,6 @@ function configurarAbasFormulario() {
         document.getElementById('bloco-validade-fixo').classList.add('hidden');
     };
 
-    // Controle de recorrência
     document.getElementById('despesa-tipo').onchange = (e) => {
         if(e.target.value === 'fixo') {
             document.getElementById('bloco-validade-fixo').classList.remove('hidden');
@@ -609,7 +744,7 @@ function configurarAbasFormulario() {
     };
 }
 
-// --- SUBMIT DO FORMULÁRIO UNIFICADO ---
+// --- SUBMIT E EXCLUSÃO ---
 document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
     e.preventDefault();
     
@@ -631,18 +766,29 @@ document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
         const { error } = await supabase.from('fin_despesas').insert([novoItem]);
         if (!error) {
             despesas.push(novoItem);
+            mostrarToast("Gasto anotado! Continue assim.", "sucesso");
         }
     } else {
         const { error } = await supabase.from('fin_receitas').insert([novoItem]);
         if (!error) {
             receitas.push(novoItem);
+            mostrarToast("Receita injetada com sucesso! 🚀", "sucesso");
         }
     }
 
     e.target.reset();
     document.getElementById('lancamento-id-edicao').value = '';
     document.getElementById('bloco-validade-fixo').classList.add('hidden');
+    
+    // Configura novamente a data de hoje por conveniência de preenchimento continuado
+    const hojeIso = new Date().toISOString().split('T')[0];
+    document.getElementById('lancamento-data').value = hojeIso;
+
     atualizarInterfacePeriodo();
+    
+    // Efeito de Gratificação Visual nos cards principais
+    piscarElemento('wrapper-saldo-real');
+    piscarElemento('wrapper-saldo');
 };
 
 window.excluirLancamento = async function(id, tipo) {
@@ -654,11 +800,12 @@ window.excluirLancamento = async function(id, tipo) {
             const { error } = await supabase.from('fin_receitas').delete().eq('id', id);
             if (!error) receitas = receitas.filter(r => r.id !== id);
         }
+        mostrarToast("Lançamento removido do extrato", "info");
         atualizarInterfacePeriodo();
     }
 };
 
-// --- MULTIMETAS / PROJETOS ---
+// --- PROJETOS ---
 document.getElementById('form-projeto').onsubmit = async (e) => {
     e.preventDefault();
     const novoProj = {
@@ -672,6 +819,7 @@ document.getElementById('form-projeto').onsubmit = async (e) => {
     if(!error) {
         projetosProjetados.push(novoProj);
         e.target.reset();
+        mostrarToast("Novo sonho projetado!", "sucesso");
         atualizarInterfacePeriodo();
     }
 };
@@ -680,11 +828,12 @@ window.excluirProjeto = async function(id) {
     if(confirm("Deseja remover este projeto/meta?")) {
         const { error } = await supabase.from('fin_projetos').delete().eq('id', id);
         if(!error) projetosProjetados = projetosProjetados.filter(p => p.id !== id);
+        mostrarToast("Meta de projeto arquivada", "info");
         atualizarInterfacePeriodo();
     }
 };
 
-// --- CONTROLE DE FILTROS DO EXTRATO ---
+// --- FILTROS ---
 document.getElementById('filtro-extrato-todos').onclick = (e) => { filtroExtratoAtual = "todos"; alternarVisualFiltro(e.target); renderizarLancamentosExtrato(); };
 document.getElementById('filtro-extrato-despesas').onclick = (e) => { filtroExtratoAtual = "despesas"; alternarVisualFiltro(e.target); renderizarLancamentosExtrato(); };
 document.getElementById('filtro-extrato-receitas').onclick = (e) => { filtroExtratoAtual = "receitas"; alternarVisualFiltro(e.target); renderizarLancamentosExtrato(); };
@@ -697,16 +846,14 @@ function alternarVisualFiltro(elementoAtivo) {
     elementoAtivo.className = "px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 shadow-sm text-purple-600 dark:text-purple-400 font-black transition-all";
 }
 
-// --- BUSCA GLOBAL EM HISTÓRICO ---
 document.getElementById('busca-historico').oninput = () => renderizarHistoricoGeral();
 document.getElementById('filtro-cat-historico').onchange = () => renderizarHistoricoGeral();
 
-// --- CONTROLE DE MESES ---
 document.getElementById('btn-mes-anterior').onclick = () => { dataAncorada.setMonth(dataAncorada.getMonth()-1); atualizarInterfacePeriodo(); };
 document.getElementById('btn-mes-seguinte').onclick = () => { dataAncorada.setMonth(dataAncorada.getMonth()+1); atualizarInterfacePeriodo(); };
 document.getElementById('btn-mes-atual').onclick = () => { dataAncorada = new Date(); atualizarInterfacePeriodo(); };
 
-// --- CHATBOT FLUTUANTE (CONSULTOR INTEGRADO) ---
+// --- CHATBOT ---
 document.getElementById('btn-chat-trigger').onclick = () => document.getElementById('caixa-chat').classList.toggle('hidden');
 document.getElementById('btn-minimizar-chat').onclick = () => document.getElementById('caixa-chat').classList.add('hidden');
 
@@ -721,7 +868,6 @@ function responderChat() {
     if(!texto) return;
 
     let resposta = "Desculpe, não entendi. Você pode perguntar sobre 'dica', 'gargalos', 'saldo' ou 'investimento'.";
-    
     const saldoHistoricoReal = receitas.reduce((acc, r) => acc + r.valor, 0) - despesas.reduce((acc, d) => acc + d.valor, 0);
 
     if (texto.includes('dica') || texto.includes('ajuda')) {
@@ -736,7 +882,7 @@ function responderChat() {
     input.value = '';
 }
 
-// --- CONTROLE DE TEMAS ---
+// --- TEMA ---
 document.getElementById('btn-tema').onclick = () => {
     document.documentElement.classList.toggle('dark');
     const isDark = document.documentElement.classList.contains('dark');
@@ -744,16 +890,18 @@ document.getElementById('btn-tema').onclick = () => {
     lucide.createIcons();
 };
 
-// --- GATILHO DE INICIALIZAÇÃO CORRECTO ---
+// --- GATILHO DE INICIALIZAÇÃO ---
 window.onload = () => {
     configurarAbasFormulario();
     carregarDadosDoSupabase();
     
-    // Configurar visual inicial do tema
     const isDark = document.documentElement.classList.contains('dark');
     document.getElementById('btn-tema').innerHTML = isDark ? `<i data-lucide="sun" class="w-4 h-4 text-amber-500"></i>` : `<i data-lucide="moon" class="w-4 h-4 text-slate-600"></i>`;
     
-    // Ativar aba padrão móvel
+    // Preencher data padrão do formulário como 'hoje'
+    const hojeIso = new Date().toISOString().split('T')[0];
+    document.getElementById('lancamento-data').value = hojeIso;
+    
     mudarAbaMobile('dashboard');
     lucide.createIcons();
 };
