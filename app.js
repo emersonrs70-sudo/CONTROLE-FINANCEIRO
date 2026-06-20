@@ -180,15 +180,17 @@ function atualizarNudgesHoje() {
 }
 
 // --- NAVEGAÇÃO DE ABAS (MOBILE) ---
+// --- CONTROLE DE NAVEGAÇÃO DE ABAS (MOBILE) COM ANIMAÇÃO ---
 function mudarAbaMobile(idAba) {
     document.querySelectorAll('.mobile-tab').forEach(secao => {
         secao.classList.add('hidden');
-        secao.classList.remove('md:block', 'md:grid');
+        secao.classList.remove('grid', 'block');
     });
 
     const secaoAtiva = document.getElementById(`secao-${idAba}`);
     if (secaoAtiva) {
         secaoAtiva.classList.remove('hidden');
+        // Mantém a estrutura de grid ativa para organizar o espaçamento das transações
         if (idAba === 'transacoes') {
             secaoAtiva.classList.add('grid');
         } else {
@@ -200,6 +202,7 @@ function mudarAbaMobile(idAba) {
     abas.forEach(aba => {
         const btn = document.getElementById(`nav-btn-${aba}`);
         if(btn) {
+            const icon = btn.querySelector('i');
             if(aba === idAba) {
                 btn.className = "flex flex-col items-center gap-0.5 text-purple-600 dark:text-purple-400 font-black transition-all duration-300 scale-105";
                 if (icon) {
@@ -227,7 +230,6 @@ function mudarAbaMobile(idAba) {
         setTimeout(renderizarGraficos, 100);
     }
 }
-
 // --- CARREGAMENTO DO SUPABASE ---
 async function carregarDadosDoSupabase() {
     try {
