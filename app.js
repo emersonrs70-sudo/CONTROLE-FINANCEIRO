@@ -103,6 +103,8 @@ function atualizarInterfacePeriodo() {
     renderizarHistoricoGeral();
     renderizarGraficos();
     atualizarAnalisesCalculadas();
+    atualizarUIStreak();
+    atualizarNudgesHoje();
 }
 
 function inicializarComponentesSelect() {
@@ -638,7 +640,11 @@ document.getElementById('form-lancamento-unificado').onsubmit = async (e) => {
             receitas.push(novoItem);
         }
     }
-
+ const tipoFeedback = modoFormulario === 'despesa' ? "Gasto anotado! Continue assim." : "Receita injetada com sucesso! 🚀";
+    mostrarToast(tipoFeedback, "sucesso");
+    
+    piscarElemento('card-saldo-real');
+    piscarElemento('card-saldo');
     e.target.reset();
     document.getElementById('lancamento-id-edicao').value = '';
     document.getElementById('bloco-validade-fixo').classList.add('hidden');
@@ -757,3 +763,134 @@ window.onload = () => {
     mudarAbaMobile('dashboard');
     lucide.createIcons();
 };
+// --- COPIAR E COLAR NO FINAL DO SEU APP.JS ---
+
+// 1. SISTEMA DE TOASTS E GRATIFICAÇÃO VISUAL
+window.mostrarToast = function(mensagem, tipo = 'sucesso') {
+    const container = document.getElementById('toast-container');
+    if(!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-xs font-bold transition-all duration-300 opacity-0 translate-y-2 pointer-events-auto bg-white dark:bg-slate-900 ${
+        tipo === 'sucesso' 
+        ? 'border-emerald-200 dark:border-emerald-950 text-emerald-600 dark:text-emerald-400' 
+        : 'border-blue-200 dark:border-blue-950 text-blue-600 dark:text-blue-400'
+    }`;
+
+    const icon = tipo === 'sucesso' ? 'sparkles' : 'bell';
+    toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i> <span>${mensagem}</span>`;
+    container.appendChild(toast);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    setTimeout(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+    }, 50);
+
+    setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+};
+
+function piscarElemento(id) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.add('ring-4', 'ring-purple-500/50', 'scale-105');
+    setTimeout(() => {
+        el.classList.remove('ring-4', 'ring-purple-500/50', 'scale-105');
+    }, 500);
+}
+
+// 2. SISTEMA DE CÁLCULO DE STREAK DIÁRIO (Sequência)
+function calcularStreakDiario() {
+    const todasDatas = [
+        ...despesas.map(d => d.data),
+        ...receitas.map(r => r.data)
+    ].filter(Boolean);
+
+    if (todasDatas.length === 0) return 0;
+
+    const datasUnicas = [...new Set(todasDatas)].sort((a, b) => new Date(b) - new Date(a));
+
+    const hoje = new Date();
+    const formatarLocalDate = (date) => {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const hojeStr = formatarLocalDate(hoje);
+    const ontem = new Date(hoje);
+    ontem.setDate(hoje.getDate() - 1);
+    const ontemStr = formatarLocalDate(ontem);
+
+    if (datasUnicas[0] < ontemStr && datasUnicas[0] !== hojeStr) {
+        return 0;
+    }
+
+    let streak = 0;
+    let dataEsperada = new Date(datasUnicas[0]); 
+
+    for (let i = 0; i < datasUnicas.length; i++) {
+        const dataAtualStr = datasUnicas[i];
+        const dataEsperadaStr = formatarLocalDate(dataEsperada);
+
+        if (dataAtualStr === dataEsperadaStr) {
+            streak++;
+            dataEsperada.setDate(dataEsperada.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+    return streak;
+}
+
+function atualizarUIStreak() {
+    const streak = calcularStreakDiario();
+    const container = document.getElementById('streak-container');
+    if (!container) return;
+
+    if (streak > 0) {
+        container.className = "flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-amber-200 dark:border-amber-900/40 shadow-sm transition-all duration-300";
+        container.innerHTML = `<i data-lucide="flame" class="w-3.5 h-3.5 text-amber-500 fill-amber-500 animate-pulse"></i> <span>${streak} ${streak === 1 ? 'dia' : 'dias'}</span>`;
+    } else {
+        container.className = "flex items-center gap-1 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300";
+        container.innerHTML = `<i data-lucide="flame-kindling" class="w-3.5 h-3.5"></i> <span>0 dias</span>`;
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 3. IMPLEMENTAÇÃO DE NUDGES DE COMPORTAMENTO
+function atualizarNudgesHoje() {
+    const hoje = new Date();
+    const hojeStr = hoje.toISOString().split('T')[0];
+    
+    const registrouHoje = [
+        ...despesas.map(d => d.data),
+        ...receitas.map(r => r.data)
+    ].includes(hojeStr);
+
+    const statusBanner = document.getElementById('status-geral-banner');
+    const statusTitulo = document.getElementById('status-geral-titulo');
+    const statusDesc = document.getElementById('status-geral-desc');
+    const streak = calcularStreakDiario();
+
+    if (!statusBanner || !statusTitulo || !statusDesc) return;
+
+    if (!registrouHoje) {
+        statusBanner.className = "p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 bg-amber-50/50 border-amber-200 dark:bg-slate-900/40 dark:border-amber-950/40 shadow-sm transition-all duration-300";
+        statusTitulo.innerHTML = `<span class="text-amber-600 dark:text-amber-400 flex items-center gap-1.5"><i data-lucide="flame" class="w-4 h-4 fill-amber-500"></i> Proteja seu Streak Diário!</span>`;
+        statusDesc.innerText = streak > 0 
+            ? `Você ainda não anotou seus gastos de hoje. Registre qualquer lançamento para garantir seu streak de ${streak} ${streak === 1 ? 'dia' : 'dias'}!`
+            : `Mantenha o controle sob rédeas curtas. Faça seu primeiro registro do dia e ative sua chama de hábito!`;
+    } else {
+        statusBanner.className = "p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50 border-slate-300 dark:bg-slate-900 dark:border-slate-800 shadow-sm transition-all duration-300";
+        statusTitulo.innerHTML = `<span class="text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5"><i data-lucide="check-circle" class="w-4 h-4"></i> Organização em dia!</span>`;
+        statusDesc.innerText = streak > 0
+            ? `Seu streak de ${streak} ${streak === 1 ? 'dia' : 'dias'} está assegurado hoje. Excelente rotina financeira!`
+            : `Sua saúde financeira agradece. Dados salvos com sucesso!`;
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
