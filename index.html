@@ -35,7 +35,8 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen font-sans antialiased transition-colors duration-300 pb-20 md:pb-4">
-
+<!-- Localize a tag <body> e insira esta linha imediatamente abaixo dela: -->
+<div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col gap-2 w-full max-w-xs px-4"></div>
     <!-- Header Fixo -->
     <header class="w-full bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-4 sticky top-0 z-45 shadow-sm">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
@@ -49,7 +50,10 @@
                     <span id="txt-periodo-atual" class="text-xs font-bold px-2 min-w-[100px] text-center text-slate-700 dark:text-slate-300">Janeiro 2025</span>
                     <button id="btn-mes-seguinte" class="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     <button id="btn-mes-atual" class="text-[10px] bg-white dark:bg-slate-800 px-2 py-1.5 rounded-md ml-1 hover:bg-slate-200 shadow-sm font-medium transition-all">Hoje</button>
-                </div>
+            </div>
+                <div id="streak-container" class="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-amber-200 dark:border-amber-900/40 shadow-sm transition-all duration-300">
+                    <i data-lucide="flame" class="w-3.5 h-3.5"></i> <span>0 dias</span>
+            </div>
                 <button id="btn-tema" class="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all shadow-sm">
                     <i id="icone-tema" data-lucide="sun" class="w-4 h-4"></i>
                 </button>
