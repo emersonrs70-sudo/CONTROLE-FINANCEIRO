@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gerenciador Financeiro Premium v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
+    <script> const tipoFeedback = modoFormulario === 'despesa' ? "Gasto anotado! Continue assim." : "Receita injetada com sucesso! 🚀";
+    mostrarToast(tipoFeedback, "sucesso");
+    
+    piscarElemento('card-saldo-real');
+    piscarElemento('card-saldo'); const tipoFeedback = modoFormulario === 'despesa' ? "Gasto anotado! Continue assim." : "Receita injetada com sucesso! 🚀";
+    mostrarToast(tipoFeedback, "sucesso");
+    
+    piscarElemento('card-saldo-real');
+    piscarElemento('card-saldo');
         tailwind.config = {
             darkMode: 'class',
         }
@@ -239,7 +247,7 @@
         </section>
 
         <!-- ABA 2: TRANSACÕES (Lançamentos + Extrato do Período + Busca Geral) -->
-        <section id="secao-transacoes" class="mobile-tab hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section id="secao-transacoes" class="mobile-tab hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- Formulário Unificado de Lançamento -->
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4 self-start">
